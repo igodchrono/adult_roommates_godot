@@ -134,6 +134,9 @@ func is_vulnerable() -> bool:
 func is_asleep() -> bool:
 	return state in ["спит", "отключка"] or effects.get("deep_sleep", false)
 
+func is_up() -> bool:
+	return not is_asleep() and not is_vulnerable()
+
 func needs_stealth() -> bool:
 	if is_vulnerable():
 		return false

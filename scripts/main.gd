@@ -271,30 +271,38 @@ func _enter_room(loc: String, char: CharacterData, quiet: bool):
 	if quiet:
 		stealth_mode = true
 		stealth_target = char
-		var stress = 20 - int(char.relation / 8.0) - int(char.arousal / 15.0)
-		stress = clampi(stress, 2, 25)
-		if char.is_vulnerable():
-			stress = 0
-		char.change_anxiety(stress)
-		state.add_log("Тихий вход. %s не проснулась. Тревожность +%d (%d%%)." % [char.char_name, stress, char.anxiety])
-		if char.anxiety >= 100:
-			state.kick_out(char)
-			stealth_mode = false
-			stealth_target = null
+		if char.is_asleep() and not char.is_vulnerable():
+			var stress = 20 - int(char.relation / 8.0) - int(char.arousal / 15.0)
+			stress = clampi(stress, 2, 25)
+			char.change_anxiety(stress)
+			state.add_log("Тихий вход. %s не проснулась. Тревожность +%d (%d%%)." % [char.char_name, stress, char.anxiety])
+			if char.anxiety >= 100:
+				state.kick_out(char)
+				stealth_mode = false
+				stealth_target = null
+		else:
+			state.add_log("Ты вошёл тихо. %s уже не спит." % char.char_name)
 	else:
 		stealth_mode = false
 		stealth_target = null
-		var wakes = char.is_asleep() and not char.is_vulnerable() and char.relation < 55 and state.is_night()
-		if wakes:
+		if char.is_asleep() and not char.is_vulnerable():
 			char.set_state("бодрствует")
 			char.has_blanket = true
 			if char.clothes == "голая":
 				char.set_clothes("домашняя")
-			char.change_anxiety(35)
 			state.add_log("Ты вошёл. %s проснулась." % char.char_name)
-			if char.relation < 40 or char.anxiety >= 100:
+			if char.relation < 40:
+				char.change_anxiety(35)
 				state.kick_out(char)
+			elif char.relation < 55:
+				char.change_anxiety(12)
+				char.change_mood(-6)
+				state.add_log("%s недовольна, что её разбудили." % char.char_name)
+		elif char.is_vulnerable():
+			state.add_log("%s не просыпается." % char.char_name)
 		else:
+			if char.state == "умывается":
+				char.set_state("бодрствует")
 			state.add_log("Ты вошёл к %s." % char.char_name)
 	_refresh_all()
 
@@ -838,7 +846,7 @@ func _do_action(aid: String, hours: int, char: CharacterData):
 func _run_kernel(char: CharacterData, slot: String, hours: int, rel_gain: int, ar_gain: int):
 	if action_menu:
 		action_menu.visible = false
-	if char.is_asleep() or char.is_vulnerable() or char.state != "бодрствует":
+	if not char.is_up():
 		state.add_log("%s не в сознании. Кнопка не сработала." % char.char_name)
 		_refresh_all()
 		return
@@ -860,7 +868,7 @@ func _execute_action(aid: String, hours: int, char: CharacterData):
 		"peep": r = Interactions.peep(char)
 		"sleep": r = Interactions.sleep_together(char)
 		"undress", "sex_m", "sex_d", "sex_c", "sex_o", "sex_s", "hand", "blanket", "wake_nsfw":
-			if char.is_asleep() or char.is_vulnerable() or char.state != "бодрствует":
+			if not char.is_up():
 				r = "%s не в сознании." % char.char_name
 			else:
 				char.change_relation(4)

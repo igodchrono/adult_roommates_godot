@@ -96,7 +96,7 @@ static func peep(char: CharacterData) -> String:
 	return text
 
 static func _awake(char: CharacterData) -> bool:
-	return char.state == "бодрствует" and not char.is_asleep() and not char.is_vulnerable()
+	return char.is_up()
 
 static func _can_sex(char: CharacterData) -> bool:
 	return _awake(char) and char.relation >= 65 and char.arousal >= 45
