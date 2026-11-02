@@ -1,102 +1,185 @@
 extends Node
 class_name Dialogues
 
-const LENA_DIALOGS = [
+const LENA = [
 	{
-		"text": "Лена смотрит на тебя выжидающе. «Ну, чего хотел?»",
+		"min_rel": 0, "max_rel": 34, "min_ar": 0, "max_ar": 100,
+		"text": "Лена даже не садится. «Говори короче.»",
 		"options": [
-			{"text": "Просто поздороваться", "relation": 3, "arousal": 0, "response": "«Привет. Как дела?»"},
-			{"text": "Сказать, что она сегодня хорошо выглядит", "relation": 5, "arousal": 8, "response": "«Ого, комплименты? Ну спасибо...» улыбается."},
-			{"text": "Начать откровенный разговор о желаниях", "relation": 2, "arousal": 15, "response": "«Прямо в лоб? Смело. Мне нравится.»"},
-			{"text": "Подколоть её", "relation": -4, "arousal": 0, "response": "«Очень смешно.» закатывает глаза."},
+			{"text": "Поздороваться", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": 2, "arousal": 0, "response": "«Привет. И всё?»"},
+			]},
+			{"text": "Сделать комплимент", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": -2, "arousal": 0, "response": "«Не надо. Мы почти не знакомы.»"},
+				{"min_rel": 20, "min_ar": 30, "relation": 1, "arousal": 2, "response": "Она хмыкает, но не злится."},
+			]},
+			{"text": "Спросить, как день", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": 3, "arousal": 0, "response": "«Нормально. Устала.»"},
+			]},
 		]
 	},
 	{
-		"text": "Лена сидит расслабленно. «Что-то на уме?»",
+		"min_rel": 35, "max_rel": 54, "min_ar": 0, "max_ar": 100,
+		"text": "Лена опирается на косяк. «Ну, чего хотел?»",
 		"options": [
-			{"text": "Спросить про работу", "relation": 4, "arousal": 0, "response": "«Устала уже. Хорошо, что дома.»"},
-			{"text": "Предложить массаж плеч", "relation": 6, "arousal": 12, "response": "«Ммм... можно.» подставляет плечи."},
-			{"text": "Сказать, что думал о ней ночью", "relation": 3, "arousal": 18, "response": "«Ого... серьёзно?» смотрит заинтересованно."},
-			{"text": "Промолчать и просто смотреть", "relation": 1, "arousal": 5, "response": "Она чувствует твой взгляд и слегка краснеет."},
+			{"text": "Поболтать про работу", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": 4, "arousal": 0, "response": "«Дома лучше. Хоть ты не достаёшь.» усмехается."},
+			]},
+			{"text": "Сказать, что она хорошо выглядит", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": 4, "arousal": 4, "response": "«Спасибо.» короткий взгляд."},
+				{"min_rel": 45, "min_ar": 40, "relation": 5, "arousal": 8, "response": "«Ты это специально?» голос тише, но она не уходит."},
+			]},
+			{"text": "Предложить чай", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": 3, "arousal": 0, "response": "«Можно. На кухне.»"},
+			]},
+			{"text": "Подойти слишком близко", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": -3, "arousal": 0, "response": "«Эй. Рано.» она отступает."},
+				{"min_rel": 48, "min_ar": 35, "relation": 2, "arousal": 6, "response": "Она не отступает сразу. «Осторожнее.»"},
+			]},
 		]
 	},
 	{
-		"text": "Лена closely смотрит на тебя. «Ты сегодня какой-то странный.»",
+		"min_rel": 55, "max_rel": 100, "min_ar": 0, "max_ar": 44,
+		"text": "Лена улыбается уголком губ. «Соскучился?»",
 		"options": [
-			{"text": "Признаться, что хочешь её", "relation": 4, "arousal": 20, "response": "«Прямолинейно. Мне это нравится.» голос становится ниже."},
-			{"text": "Сказать, что просто соскучился", "relation": 8, "arousal": 5, "response": "«Мило.» улыбается тепло."},
-			{"text": "Отшутиться", "relation": 2, "arousal": 0, "response": "«Ну-ну.» усмехается."},
-			{"text": "Промолчать", "relation": 0, "arousal": 3, "response": "Она продолжает смотреть, ожидая."},
+			{"text": "Сказать, что да", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 6, "arousal": 3, "response": "«Приятно.» садится ближе, без спешки."},
+			]},
+			{"text": "Спросить, как она на самом деле", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 7, "arousal": 1, "response": "«Устала, но с тобой спокойнее.»"},
+				{"min_rel": 70, "min_ar": 20, "relation": 5, "arousal": 4, "response": "«Хорошо. Правда. Не порть.»"},
+			]},
+			{"text": "Намекнуть на вечер вдвоём", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 3, "arousal": 6, "response": "«Может. Не торопи.»"},
+				{"min_rel": 70, "min_ar": 30, "relation": 4, "arousal": 8, "response": "«Если без давления — можно.»"},
+			]},
 		]
 	},
 	{
-		"text": "Лена стоит у окна. «Что-то хочешь сказать?»",
+		"min_rel": 65, "max_rel": 100, "min_ar": 45, "max_ar": 100,
+		"text": "Лена смотрит прямо. Дыхание чуть чаще. «Ты сегодня настойчивый.»",
 		"options": [
-			{"text": "Поговорить о том, как прошёл день", "relation": 4, "arousal": 2, "response": "«Нормально. А у тебя?»"},
-			{"text": "Сказать, что скучал", "relation": 7, "arousal": 8, "response": "«Правда? Приятно слышать.»"},
-			{"text": "Намекнуть на близость", "relation": 3, "arousal": 16, "response": "«Смелый.» смотрит в глаза."},
-			{"text": "Предложить чай", "relation": 3, "arousal": 0, "response": "«Можно.»"},
+			{"text": "Сказать, что она тебе нравится", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 5, "arousal": 8, "response": "«Знаю.» подходит на шаг. «Я тоже не против компании.»"},
+			]},
+			{"text": "Предложить остаться рядом", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 4, "arousal": 10, "response": "«Останься. Только пока я сама так решила.»"},
+				{"min_rel": 80, "min_ar": 60, "relation": 6, "arousal": 12, "response": "«Иди сюда.» голос низкий, она ждёт твоей осторожности."},
+			]},
+			{"text": "Отшутиться и сбавить тон", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 3, "arousal": -4, "response": "«Ладно, выдохнули.» она улыбается спокойнее."},
+			]},
 		]
 	},
-	{
-		"text": "Лена улыбается уголком губ. «Ну и?»",
-		"options": [
-			{"text": "Сделать комплимент её фигуре", "relation": 5, "arousal": 12, "response": "«Ого. Спасибо.» краснеет слегка."},
-			{"text": "Спросить, не хочет ли она отдохнуть вместе", "relation": 6, "arousal": 10, "response": "«Можно попробовать.»"},
-			{"text": "Просто постоять рядом", "relation": 2, "arousal": 4, "response": "Она не отстраняется."},
-			{"text": "Уйти", "relation": 0, "arousal": 0, "response": "«Ладно.»"},
-		]
-	}
 ]
 
-const MASHA_DIALOGS = [
+const MASHA = [
 	{
-		"text": "Маша слегка смущается. «Ты чего?»",
+		"min_rel": 0, "max_rel": 34, "min_ar": 0, "max_ar": 100,
+		"text": "Маша держит чашку двумя руками. «А… привет.»",
 		"options": [
-			{"text": "Сказать, что она милая", "relation": 6, "arousal": 7, "response": "«Правда?» краснеет и улыбается."},
-			{"text": "Спросить, как прошёл день", "relation": 5, "arousal": 0, "response": "«Нормально... а у тебя?»"},
-			{"text": "Намекнуть, что она тебя привлекает", "relation": 3, "arousal": 14, "response": "«Ой...» отводит глаза, но не уходит."},
-			{"text": "Подшутить над ней", "relation": -3, "arousal": 0, "response": "«Не надо так...» дуется."},
+			{"text": "Поздороваться тихо", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": 3, "arousal": 0, "response": "«Привет.» она чуть расслабляет плечи."},
+			]},
+			{"text": "Сказать, что она милая", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": -1, "arousal": 0, "response": "«Не надо так сразу…» отводит глаза."},
+				{"min_rel": 25, "min_ar": 20, "relation": 2, "arousal": 2, "response": "Краснеет, но не убегает."},
+			]},
+			{"text": "Спросить про день", "lines": [
+				{"min_rel": 0, "min_ar": 0, "relation": 4, "arousal": 0, "response": "«Нормально. Много людей.»"},
+			]},
 		]
 	},
 	{
-		"text": "Маша смотрит в пол. «Можно тебя кое о чём спросить?»",
+		"min_rel": 35, "max_rel": 54, "min_ar": 0, "max_ar": 100,
+		"text": "Маша улыбается несмело. «Ты чего?»",
 		"options": [
-			{"text": "Конечно, спрашивай", "relation": 5, "arousal": 2, "response": "«А ты... часто думаешь обо мне?»"},
-			{"text": "Лучше расскажи, о чём думаешь ты", "relation": 4, "arousal": 10, "response": "«О разном...» голос становится тише."},
-			{"text": "Подойти ближе", "relation": 3, "arousal": 16, "response": "Она не отстраняется. Дыхание участилось."},
-			{"text": "Сказать, что занят", "relation": -5, "arousal": 0, "response": "«А... ладно.» разочарованно."},
+			{"text": "Сказать, что она милая", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": 5, "arousal": 3, "response": "«Правда?» прячет улыбку."},
+				{"min_rel": 45, "min_ar": 40, "relation": 4, "arousal": 7, "response": "«Ты так смотришь…» голос тише."},
+			]},
+			{"text": "Предложить сесть рядом", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": 4, "arousal": 2, "response": "Подвигается, оставляя место."},
+				{"min_rel": 45, "min_ar": 35, "relation": 3, "arousal": 6, "response": "Садится вплотную и не отодвигается."},
+			]},
+			{"text": "Пошутить грубо", "lines": [
+				{"min_rel": 35, "min_ar": 0, "relation": -4, "arousal": 0, "response": "«Не надо так.» дуется."},
+			]},
 		]
 	},
 	{
-		"text": "Маша нервно играет с волосами. «Ты мне нравишься...»",
+		"min_rel": 55, "max_rel": 100, "min_ar": 0, "max_ar": 44,
+		"text": "Маша смотрит снизу вверх. «Я рада, что ты зашёл.»",
 		"options": [
-			{"text": "Признать взаимность", "relation": 10, "arousal": 12, "response": "Её лицо озаряет улыбка. «Правда?»"},
-			{"text": "Поцеловать в щёку", "relation": 7, "arousal": 15, "response": "Она замирает, потом тихонько вздыхает."},
-			{"text": "Сказать, что это мило", "relation": 4, "arousal": 5, "response": "«Да...» смотрит вниз."},
-			{"text": "Проигнорировать", "relation": -8, "arousal": 0, "response": "Она заметно расстраивается."},
+			{"text": "Сказать, что тоже рад", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 6, "arousal": 2, "response": "Улыбка становится спокойной. «Тогда посиди.»"},
+			]},
+			{"text": "Спросить, чего она хочет", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 5, "arousal": 3, "response": "«Просто побыть. Без спешки.»"},
+				{"min_rel": 70, "min_ar": 25, "relation": 4, "arousal": 6, "response": "«Можно ближе. Если ты тоже этого хочешь.»"},
+			]},
+			{"text": "Похвалить, как ей идёт домашний свитер", "lines": [
+				{"min_rel": 55, "min_ar": 0, "relation": 4, "arousal": 4, "response": "«Спасибо…» теребит рукав."},
+			]},
 		]
 	},
 	{
-		"text": "Маша сидит на кровати. «Привет...»",
+		"min_rel": 65, "max_rel": 100, "min_ar": 45, "max_ar": 100,
+		"text": "Маша не отводит взгляд. Щёки тёплые. «Я думала о тебе.»",
 		"options": [
-			{"text": "Сесть рядом", "relation": 6, "arousal": 7, "response": "Она подвигается ближе."},
-			{"text": "Спросить, всё ли в порядке", "relation": 5, "arousal": 2, "response": "«Да, просто устала.»"},
-			{"text": "Сказать, что она красивая", "relation": 7, "arousal": 11, "response": "«Спасибо...» тихо."},
-			{"text": "Предложить помочь с чем-то", "relation": 4, "arousal": 0, "response": "«Можно.»"},
+			{"text": "Сказать, что ты тоже", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 6, "arousal": 8, "response": "«Тогда не уходи сразу.» берёт тебя за рукав."},
+			]},
+			{"text": "Спросить, можно ли остаться", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 5, "arousal": 10, "response": "Кивает. «Можно. Я скажу, если захочу остановиться.»"},
+				{"min_rel": 80, "min_ar": 60, "relation": 4, "arousal": 12, "response": "«Хочу, чтобы ты был рядом. Сама так решила.»"},
+			]},
+			{"text": "Предложить просто обняться и успокоиться", "lines": [
+				{"min_rel": 65, "min_ar": 45, "relation": 7, "arousal": -2, "response": "Обнимает крепко и выдыхает. «Так тоже хорошо.»"},
+			]},
 		]
 	},
-	{
-		"text": "Маша смотрит на тебя снизу вверх. «Ты чего?»",
-		"options": [
-			{"text": "Признаться в симпатии", "relation": 9, "arousal": 14, "response": "Её глаза расширяются. «Серьёзно?»"},
-			{"text": "Пошутить", "relation": 3, "arousal": 3, "response": "Она смеётся."},
-			{"text": "Пригласить на кухню", "relation": 4, "arousal": 2, "response": "«Пойдём.»"},
-			{"text": "Молча смотреть", "relation": 1, "arousal": 6, "response": "Она смущается, но не уходит."},
-		]
-	}
 ]
 
 static func get_random_dialog(char: CharacterData) -> Dictionary:
-	var list = LENA_DIALOGS if char.key == "lena" else MASHA_DIALOGS
-	return list[randi() % list.size()]
+	if char.offended_days > 0:
+		return {
+			"text": "%s смотрит в сторону. «Я ещё злюсь.»" % char.char_name,
+			"options": [
+				{"text": "Извиниться", "relation": 4, "arousal": 0, "response": "«Ладно. Но не сразу.»"},
+				{"text": "Настоять", "relation": -4, "arousal": 0, "response": "«Оставь меня.»"},
+			]
+		}
+	var pool = _pool(char)
+	var raw = pool[randi() % pool.size()]
+	var options: Array = []
+	for opt in raw["options"]:
+		var line = _pick_line(char, opt["lines"])
+		options.append({
+			"text": opt["text"],
+			"relation": line["relation"],
+			"arousal": line["arousal"],
+			"response": line["response"],
+		})
+	var mood_note = "Настроение: %s. Доверие %d, возбуждение %d." % [char.mood, char.relation, char.arousal]
+	return {"text": raw["text"] + "\n" + mood_note, "options": options}
+
+static func _pool(char: CharacterData) -> Array:
+	var all = LENA if char.key == "lena" else MASHA
+	var fit: Array = []
+	for d in all:
+		if char.relation < d["min_rel"] or char.relation > d["max_rel"]:
+			continue
+		if char.arousal < d["min_ar"] or char.arousal > d["max_ar"]:
+			continue
+		fit.append(d)
+	if fit.is_empty():
+		return [all[0]]
+	return fit
+
+static func _pick_line(char: CharacterData, lines: Array) -> Dictionary:
+	var best = lines[0]
+	for line in lines:
+		if char.relation >= int(line["min_rel"]) and char.arousal >= int(line["min_ar"]):
+			best = line
+	return best

@@ -832,7 +832,7 @@ func _show_dialogue_box(char: CharacterData, dialog: Dictionary):
 			char.change_relation(opt["relation"])
 			char.change_arousal(opt["arousal"])
 			char.change_mood(opt["relation"] * 2)
-			state.add_log("Ты: %s\n%s: %s" % [opt["text"], char.char_name, opt["response"]])
+			state.add_log("Ты: %s\n%s: %s\n(Trust %+d, возбуждение %+d)" % [opt["text"], char.char_name, opt["response"], opt["relation"], opt["arousal"]])
 			state.advance_time(1)
 			if is_instance_valid(box):
 				box.queue_free()
