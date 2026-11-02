@@ -6,81 +6,84 @@ static func look_at(char: CharacterData) -> String:
 	if char.arousal > 65:
 		text += "Она явно возбуждена.\n"
 	if char.state == "отключка":
-		text += "Она в полной отключке. Можно делать почти что угодно."
+		text += "Она крепко спит и не реагирует."
 	return text
 
 static func touch(char: CharacterData) -> String:
-	if char.state in ["спит", "отключка"]:
-		char.change_arousal(12)
-		return "Ты осторожно касаешься %s..." % char.char_name
+	if not _awake(char):
+		return "%s сейчас не в сознании." % char.char_name
 	if char.relation < 45:
 		char.change_relation(-4)
 		return "%s: «Эй, руки!»" % char.char_name
-	char.change_arousal(14)
-	char.change_relation(5)
-	return "Ты касаешься %s. Она не отстраняется." % char.char_name
+	char.change_arousal(8)
+	char.change_relation(4)
+	return "%s не отстраняется." % char.char_name
 
 static func kiss(char: CharacterData) -> String:
-	if char.state == "отключка":
-		char.change_arousal(8)
-		return "Ты целуешь %s, пока она в отключке." % char.char_name
-	if char.relation < 55 and char.state != "спит":
-		return "%s отворачивается: «Рановато...»" % char.char_name
-	char.change_arousal(18)
-	char.change_relation(7)
-	return "Ты целуешь %s. Она отвечает." % char.char_name
+	if not _awake(char):
+		return "%s сейчас не в сознании." % char.char_name
+	if char.relation < 55:
+		return "%s отворачивается: «Рановато.»" % char.char_name
+	char.change_arousal(12)
+	char.change_relation(6)
+	return "%s отвечает на поцелуй." % char.char_name
 
 static func undress(char: CharacterData) -> String:
+	if not _awake(char):
+		return "%s сейчас не в сознании." % char.char_name
 	if char.clothes == "голая":
-		return "%s уже голая." % char.char_name
-	if char.relation < 60 and char.state not in ["спит", "отключка"]:
-		return "%s: «Нет... не сейчас.»" % char.char_name
+		return "%s уже без верхней одежды." % char.char_name
+	if char.relation < 60:
+		char.change_mood(-4)
+		return "%s: «Нет, не сейчас.»" % char.char_name
 	char.set_clothes("голая")
-	char.change_arousal(25)
-	char.change_relation(9)
-	return "Ты раздеваешь %s. Теперь она полностью обнажена." % char.char_name
+	char.change_arousal(15)
+	char.change_relation(4)
+	char.change_mood(4)
+	return "%s соглашается раздеться." % char.char_name
 
 static func sex_missionary(char: CharacterData) -> String:
 	if not _can_sex(char):
 		return _refuse(char)
-	char.change_arousal(35)
-	char.change_relation(12)
-	return "Ты берёшь %s в миссионерской. Она громко стонет." % char.char_name
+	char.change_arousal(20)
+	char.change_relation(8)
+	char.change_mood(6)
+	return "Вы занимаетесь сексом. %s сама этого хочет." % char.char_name
 
 static func sex_doggy(char: CharacterData) -> String:
 	if not _can_sex(char):
 		return _refuse(char)
-	char.change_arousal(38)
-	char.change_relation(13)
-	return "Ты берёшь %s сзади. Она выгибается навстречу." % char.char_name
+	char.change_arousal(20)
+	char.change_relation(8)
+	char.change_mood(6)
+	return "Вы занимаетесь сексом. %s не против." % char.char_name
 
 static func sex_cowgirl(char: CharacterData) -> String:
 	if not _can_sex(char):
 		return _refuse(char)
-	char.change_arousal(36)
-	char.change_relation(14)
-	return "%s садится сверху и двигается сама." % char.char_name
+	char.change_arousal(20)
+	char.change_relation(8)
+	char.change_mood(6)
+	return "%s сама задаёт ритм." % char.char_name
 
 static func sex_oral(char: CharacterData) -> String:
-	if char.relation < 60 and char.state not in ["спит", "отключка"]:
-		return "%s: «Я ещё не готова...»" % char.char_name
-	char.change_arousal(28)
-	char.change_relation(10)
-	return "%s берёт тебя в рот." % char.char_name
+	if not _can_sex(char):
+		return _refuse(char)
+	char.change_arousal(16)
+	char.change_relation(6)
+	char.change_mood(4)
+	return "%s соглашается на более близкую ласку." % char.char_name
 
-static func sex_sleep(char: CharacterData) -> String:
-	if char.state not in ["спит", "отключка"]:
-		return "Она не спит."
-	char.change_arousal(30)
-	char.change_relation(8)
-	return "Пока %s без сознания, ты осторожно входишь..." % char.char_name
+static func sex_sleep(_char: CharacterData) -> String:
+	return "Пока человек спит, этого нет."
 
 static func sleep_together(char: CharacterData) -> String:
-	if char.relation < 55 and char.state != "отключка":
-		return "%s: «Не сегодня...»" % char.char_name
+	if not _awake(char) or char.relation < 55:
+		return "%s: «Не сегодня.»" % char.char_name
 	char.set_state("спит")
-	char.change_relation(6)
-	return "Вы засыпаете вместе с %s." % char.char_name
+	char.change_relation(4)
+	char.change_mood(4)
+	return "Вы ложитесь спать рядом с %s." % char.char_name
 
 static func peep(char: CharacterData) -> String:
 	var text = "Ты подсматриваешь за %s...\n" % char.char_name
@@ -92,31 +95,30 @@ static func peep(char: CharacterData) -> String:
 		char.change_arousal(5)
 	return text
 
+static func _awake(char: CharacterData) -> bool:
+	return char.state == "бодрствует" and not char.is_asleep() and not char.is_vulnerable()
+
 static func _can_sex(char: CharacterData) -> bool:
-	return (char.relation >= 65 or char.state in ["спит", "отключка"]) and (char.arousal >= 45 or char.state in ["спит", "отключка"])
+	return _awake(char) and char.relation >= 65 and char.arousal >= 45
 
 static func _refuse(char: CharacterData) -> String:
+	if not _awake(char):
+		return "%s сейчас не в сознании." % char.char_name
 	if char.relation < 65:
-		return "%s: «Я ещё не готова...»" % char.char_name
-	return "Она ещё недостаточно возбуждена."
+		return "%s: «Я ещё не готова.» Trust %d." % [char.char_name, char.relation]
+	return "Сначала нужно больше близости. Возбуждение %d." % char.arousal
 
-# Group
 static func both_undress(lena: CharacterData, masha: CharacterData) -> String:
 	var results = []
 	for char in [lena, masha]:
-		if char.clothes != "голая":
-			if char.relation >= 55 or char.state in ["спит", "отключка"]:
-				char.set_clothes("голая")
-				char.change_arousal(20)
-				results.append("%s теперь голая." % char.char_name)
-			else:
-				results.append("%s пока не готова." % char.char_name)
-		else:
-			results.append("%s уже голая." % char.char_name)
+		results.append(undress(char))
 	return "\n".join(results)
 
 static func threesome_missionary(lena: CharacterData, masha: CharacterData) -> String:
+	if not _can_sex(lena) or not _can_sex(masha):
+		return "Обе должны бодрствовать, Trust от 65 и возбуждение от 45."
 	for char in [lena, masha]:
-		char.change_arousal(30)
-		char.change_relation(10)
-	return "Секс втроём. Обе стонут и смотрят друг на друга."
+		char.change_arousal(18)
+		char.change_relation(6)
+		char.change_mood(6)
+	return "Вы проводите время втроём. Обе согласны."

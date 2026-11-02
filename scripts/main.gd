@@ -562,8 +562,17 @@ func _show_char_menu(char: CharacterData):
 		_add_action_button("Диалог", func(): _start_dialog(char))
 		_add_action_button("Прикоснуться", func(): _affection(char, "touch"))
 		_add_action_button("Поцеловать", func(): _affection(char, "kiss"))
-		if char.relation >= 40:
-			_add_stub_button("Раздеть")
+		if char.relation >= 60:
+			_add_action_button("Раздеть", func(): _execute_action("undress", 1, char))
+		if char.relation >= 65 and char.arousal >= 45:
+			_add_action_button("Ближе", func(): _execute_action("sex_m", 2, char))
+			_add_action_button("Она сверху", func(): _execute_action("sex_c", 2, char))
+			_add_action_button("Ласка", func(): _execute_action("sex_o", 2, char))
+		elif char.relation >= 50:
+			var h = Label.new()
+			h.text = "Интим откроется при Trust 65 и возбуждении 45"
+			h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			action_list.add_child(h)
 	var cb = Button.new()
 	cb.text = "Закрыть"
 	cb.pressed.connect(func(): action_menu.visible = false)
@@ -658,22 +667,20 @@ func _show_group_actions():
 	if not action_menu or not action_list: return
 	for c in action_list.get_children(): c.queue_free()
 	var t = Label.new(); t.text = "Обе вместе"; t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; t.add_theme_font_size_override("font_size", 18); action_list.add_child(t)
-	for a in ["Прикоснуться", "Поцеловать"]:
-		var who = a
-		var b = Button.new()
-		b.text = who
-		b.custom_minimum_size = Vector2(200, 36)
-		b.pressed.connect(func():
-			var kind = "touch" if who == "Прикоснуться" else "kiss"
-			if action_menu:
-				action_menu.visible = false
-			state.add_log(_apply_affection(state.lena, kind))
-			state.add_log(_apply_affection(state.masha, kind))
-			state.advance_time(1)
-			_refresh_all()
-		)
-		action_list.add_child(b)
-	_add_stub_button("Вместе")
+	_add_action_button("Раздеть обеих", func():
+		if action_menu:
+			action_menu.visible = false
+		state.add_log(Interactions.both_undress(state.lena, state.masha))
+		state.advance_time(1)
+		_refresh_all()
+	)
+	_add_action_button("Втроём", func():
+		if action_menu:
+			action_menu.visible = false
+		state.add_log(Interactions.threesome_missionary(state.lena, state.masha))
+		state.advance_time(2)
+		_refresh_all()
+	)
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
 	action_menu.visible = true
 	action_menu.position = Vector2(430, 120)
