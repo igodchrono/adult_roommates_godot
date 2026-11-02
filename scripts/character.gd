@@ -16,8 +16,10 @@ var offended_days: int = 0
 var energy: int = 75
 var hunger: int = 70
 var hygiene: int = 80
+var mood_value: int = 60
 var emotion: String = "спокойствие"
 var shown_emotion: String = ""
+var has_blanket: bool = true
 
 var effects := {
 	"no_sleep_night": false,
