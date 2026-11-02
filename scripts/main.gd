@@ -592,14 +592,14 @@ func _show_char_menu(char: CharacterData):
 		_add_action_button("Прикоснуться", func(): _affection(char, "touch"))
 		_add_action_button("Поцеловать", func(): _affection(char, "kiss"))
 		if char.relation >= 60:
-			_add_action_button("Раздеть", func(): _execute_action("undress", 1, char))
+			_add_action_button("Кнопка 1", func(): _run_kernel(char, "slot_1", 1, 4, 6))
 		if char.relation >= 65 and char.arousal >= 45:
-			_add_action_button("Ближе", func(): _execute_action("sex_m", 2, char))
-			_add_action_button("Она сверху", func(): _execute_action("sex_c", 2, char))
-			_add_action_button("Ласка", func(): _execute_action("sex_o", 2, char))
+			_add_action_button("Кнопка 2", func(): _run_kernel(char, "slot_2", 2, 5, 8))
+			_add_action_button("Кнопка 3", func(): _run_kernel(char, "slot_3", 2, 5, 8))
+			_add_action_button("Кнопка 4", func(): _run_kernel(char, "slot_4", 2, 5, 8))
 		elif char.relation >= 50:
 			var h = Label.new()
-			h.text = "Интим откроется при Trust 65 и возбуждении 45"
+			h.text = "Кнопки 2–4: Trust ≥ 65 и возбуждение ≥ 45"
 			h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			action_list.add_child(h)
 	var cb = Button.new()
@@ -696,20 +696,30 @@ func _show_group_actions():
 	if not action_menu or not action_list: return
 	for c in action_list.get_children(): c.queue_free()
 	var t = Label.new(); t.text = "Обе вместе"; t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; t.add_theme_font_size_override("font_size", 18); action_list.add_child(t)
-	_add_action_button("Раздеть обеих", func():
-		if action_menu:
-			action_menu.visible = false
-		state.add_log(Interactions.both_undress(state.lena, state.masha))
-		state.advance_time(1)
-		_refresh_all()
-	)
-	_add_action_button("Втроём", func():
-		if action_menu:
-			action_menu.visible = false
-		state.add_log(Interactions.threesome_missionary(state.lena, state.masha))
-		state.advance_time(2)
-		_refresh_all()
-	)
+	var both_awake = state.lena.state == "бодрствует" and state.masha.state == "бодрствует" and not state.lena.is_vulnerable() and not state.masha.is_vulnerable()
+	if not both_awake:
+		var n = Label.new()
+		n.text = "Только когда обе бодрствуют."
+		action_list.add_child(n)
+	elif state.lena.relation >= 60 and state.masha.relation >= 60:
+		_add_action_button("Кнопка обеих", func():
+			_run_kernel(state.lena, "slot_1", 0, 4, 6)
+			_run_kernel(state.masha, "slot_2", 1, 4, 6)
+		)
+		if state.lena.relation >= 80 and state.masha.relation >= 80 and state.lena.arousal >= 60 and state.masha.arousal >= 60:
+			_add_action_button("Кнопка вместе", func():
+				_run_kernel(state.lena, "slot_3", 0, 6, 8)
+				_run_kernel(state.masha, "slot_4", 2, 6, 8)
+			)
+		else:
+			var h = Label.new()
+			h.text = "Вместе: у обеих Trust ≥ 80 и возбуждение ≥ 60"
+			h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			action_list.add_child(h)
+	else:
+		var h2 = Label.new()
+		h2.text = "Нужен Trust ≥ 60 у обеих."
+		action_list.add_child(h2)
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
 	action_menu.visible = true
 	action_menu.position = Vector2(430, 120)
@@ -746,34 +756,36 @@ func _do_action(aid: String, hours: int, char: CharacterData):
 		return
 	_execute_action(aid, hours, char)
 
+func _run_kernel(char: CharacterData, slot: String, hours: int, rel_gain: int, ar_gain: int):
+	if action_menu:
+		action_menu.visible = false
+	if char.is_asleep() or char.is_vulnerable() or char.state != "бодрствует":
+		state.add_log("%s не в сознании. Кнопка не сработала." % char.char_name)
+		_refresh_all()
+		return
+	char.change_relation(rel_gain)
+	char.change_arousal(ar_gain)
+	char.change_mood(3)
+	state.add_log("<....>")
+	_show_square(slot)
+	if hours > 0:
+		state.advance_time(hours)
+	_refresh_all()
+
 func _execute_action(aid: String, hours: int, char: CharacterData):
 	var r = ""
 	match aid:
 		"look": r = Interactions.look_at(char)
 		"touch": r = Interactions.touch(char)
 		"kiss": r = Interactions.kiss(char)
-		"undress": r = Interactions.undress(char)
-		"blanket":
-			char.has_blanket = false
-			char.change_arousal(12)
-			r = "Ты осторожно снимаешь одеяло с %s..." % char.char_name
-		"hand":
-			char.change_arousal(18)
-			r = "Ты трогаешь %s рукой, пока она спит..." % char.char_name
-		"peep": r = Interactions.peep(char)
-		"sex_m": r = Interactions.sex_missionary(char)
-		"sex_d": r = Interactions.sex_doggy(char)
-		"sex_c": r = Interactions.sex_cowgirl(char)
-		"sex_o": r = Interactions.sex_oral(char)
-		"sex_s": r = Interactions.sex_sleep(char)
-		"sleep": r = Interactions.sleep_together(char)
-		"wake_nsfw":
-			if char.can_wake_for_nsfw():
-				char.set_state("бодрствует")
-				char.change_arousal(15)
-				r = "Ты будишь %s. Она смотрит с желанием..." % char.char_name
+		"undress", "sex_m", "sex_d", "sex_c", "sex_o", "sex_s", "hand", "blanket", "wake_nsfw":
+			if char.is_asleep() or char.is_vulnerable() or char.state != "бодрствует":
+				r = "%s не в сознании." % char.char_name
 			else:
-				r = "Она ещё не готова, чтобы её будили для этого."
+				char.change_relation(4)
+				char.change_arousal(6)
+				r = "<....>"
+				_show_square("slot_1")
 	state.add_log(r)
 	show_action_image(aid, char)
 	if not stealth_mode and hours > 0:
