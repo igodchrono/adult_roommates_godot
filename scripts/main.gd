@@ -785,6 +785,12 @@ func _show_char_menu(char: CharacterData):
 	else:
 		_add_action_button("Смотреть", func(): _execute_action("look", 0, char))
 		_add_action_button("Диалог", func(): _start_dialog(char))
+		_add_action_button("Как дела", func(): _daily(char, "day"))
+		_add_action_button("Чай", func(): _daily(char, "tea"))
+		_add_action_button("Поесть вместе", func(): _daily(char, "eat"))
+		_add_action_button("Помочь по дому", func(): _daily(char, "help"))
+		_add_action_button("Телевизор", func(): _daily(char, "tv"))
+		_add_action_button("Посидеть рядом", func(): _daily(char, "sit"))
 		_add_action_button("Прикоснуться", func(): _affection(char, "touch"))
 		_add_action_button("Поцеловать", func(): _affection(char, "kiss"))
 		if char.relation >= 60:
@@ -803,6 +809,69 @@ func _show_char_menu(char: CharacterData):
 	cb.pressed.connect(func(): action_menu.visible = false)
 	action_list.add_child(cb)
 	_open_action_menu()
+
+func _daily(char: CharacterData, kind: String):
+	if action_menu:
+		action_menu.visible = false
+	if not char.is_up():
+		state.add_log("%s сейчас спит." % char.char_name)
+		_refresh_all()
+		return
+	var hours = 1
+	match kind:
+		"day":
+			char.change_relation(3)
+			char.change_mood(5)
+			state.add_log("%s: «%s»" % [char.char_name, _day_line(char)])
+		"tea":
+			if state.inventory.get("чай", 0) <= 0:
+				state.add_log("Чая нет. Купи в магазине.")
+				hours = 0
+			else:
+				state.add_log(state.offer_item(char, "чай"))
+		"eat":
+			char.set_location("кухня")
+			char.set_state("ест")
+			state.player_location = "кухня"
+			char.restore_hunger()
+			char.change_relation(4)
+			char.change_mood(6)
+			state.add_log("Вы поели на кухне. %s сыта, настроение лучше." % char.char_name)
+		"help":
+			if state.chore_for(state.player_location).is_empty():
+				state.add_log("Здесь нечего делать по дому.")
+				hours = 0
+			else:
+				state.add_log(state.do_chore(state.player_location))
+				char.change_relation(4)
+				char.change_mood(5)
+				state.add_log("%s: «Спасибо, что помог.»" % char.char_name)
+				hours = 0
+		"tv":
+			char.set_location("зал")
+			char.set_state("бодрствует")
+			state.player_location = "зал"
+			char.change_relation(2)
+			char.change_mood(7)
+			state.add_log("Вы смотрите фильм в зале. %s смеётся над шуткой." % char.char_name)
+		"sit":
+			char.change_relation(2)
+			char.change_mood(4)
+			state.add_log("Вы сидите рядом. %s не против компании." % char.char_name)
+	if hours > 0:
+		state.advance_time(hours)
+	_refresh_all()
+
+func _day_line(char: CharacterData) -> String:
+	if char.mood_value < 35:
+		return "Так себе день. Не лезь сильно."
+	if char.energy < 30:
+		return "Устала. Хочу просто посидеть."
+	if char.hunger < 35:
+		return "Голодная. Пойдём на кухню?"
+	if char.key == "lena":
+		return "Нормально. На работе шум, дома тише."
+	return "День спокойный. Приятно, что спросил."
 
 func _add_action_button(text: String, cb: Callable):
 	var b = Button.new()
