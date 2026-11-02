@@ -13,6 +13,11 @@ var state: GameState
 var room_buttons := {}
 var money_label: Label
 
+const ROOM_ICON := {
+	"зал": "hall", "комната_лены": "lena", "комната_маши": "masha",
+	"ванная": "bath", "туалет": "toilet", "кладовка": "closet",
+	"кухня": "kitchen", "моя_комната": "mine", "работа": "work", "магазин": "shop",
+}
 const ROOM_SHORT := {
 	"зал": "Зал", "комната_лены": "Лена", "комната_маши": "Маша",
 	"ванная": "Ванная", "туалет": "Туалет", "кладовка": "Кладовка",
@@ -70,9 +75,9 @@ func _apply_ui():
 	$CharacterContainer.offset_left = 0
 	$CharacterContainer.offset_top = 64
 	$CharacterContainer.offset_right = 0
-	$CharacterContainer.offset_bottom = -92
+	$CharacterContainer.offset_bottom = -108
 	$SidePanel.visible = false
-	$BottomBar.offset_top = -84
+	$BottomBar.offset_top = -100
 	if action_menu:
 		action_menu.custom_minimum_size = Vector2(280, 0)
 
@@ -156,8 +161,14 @@ func _build_room_bar():
 	room_buttons.clear()
 	for loc in state.LOCATIONS:
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(104, 62)
+		btn.custom_minimum_size = Vector2(108, 74)
 		btn.toggle_mode = true
+		btn.expand_icon = true
+		btn.add_theme_constant_override("icon_max_width", 28)
+		var icon_name = ROOM_ICON.get(loc, "")
+		var icon = load_tex("res://assets/ui/rooms/%s.png" % icon_name)
+		if icon:
+			btn.icon = icon
 		btn.pressed.connect(_on_room.bind(loc))
 		room_row.add_child(btn)
 		room_buttons[loc] = btn
