@@ -544,7 +544,7 @@ func _show_char_menu(char: CharacterData):
 	title.add_theme_font_size_override("font_size", 18)
 	action_list.add_child(title)
 	var sub = Label.new()
-	sub.text = "Trust %d · %s · %s" % [char.relation, char.mood, char.emotion]
+	sub.text = "Trust %d  Lust %d  настр. %d · %s" % [char.relation, char.arousal, char.mood_value, char.emotion]
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	action_list.add_child(sub)
 	action_list.add_child(HSeparator.new())
@@ -560,14 +560,10 @@ func _show_char_menu(char: CharacterData):
 	else:
 		_add_action_button("Смотреть", func(): _execute_action("look", 0, char))
 		_add_action_button("Диалог", func(): _start_dialog(char))
-		for stub in ["Прикоснуться", "Поцеловать", "Раздеть"]:
-			if char.relation >= 40:
-				_add_stub_button(stub)
-		if char.relation < 40:
-			var h = Label.new()
-			h.text = "Ближе — когда Trust выше"
-			h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			action_list.add_child(h)
+		_add_action_button("Прикоснуться", func(): _affection(char, "touch"))
+		_add_action_button("Поцеловать", func(): _affection(char, "kiss"))
+		if char.relation >= 40:
+			_add_stub_button("Раздеть")
 	var cb = Button.new()
 	cb.text = "Закрыть"
 	cb.pressed.connect(func(): action_menu.visible = false)
@@ -583,7 +579,40 @@ func _add_action_button(text: String, cb: Callable):
 	b.pressed.connect(cb)
 	action_list.add_child(b)
 
-func _add_stub_button(text: String):
+func _affection(char: CharacterData, kind: String):
+	if action_menu:
+		action_menu.visible = false
+	state.add_log(_apply_affection(char, kind))
+	if not stealth_mode:
+		state.advance_time(1)
+	_refresh_all()
+
+func _apply_affection(char: CharacterData, kind: String) -> String:
+	if char.is_asleep() or char.is_vulnerable():
+		return "%s сейчас не в сознании. Сначала разбуди." % char.char_name
+	if kind == "touch":
+		if char.relation < 35:
+			char.change_relation(-4)
+			char.change_mood(-8)
+			char.change_anxiety(10)
+			return "%s отстраняется. Trust %d, настроение %d." % [char.char_name, char.relation, char.mood_value]
+		char.change_relation(4)
+		char.change_arousal(8)
+		char.change_mood(5)
+		char.change_anxiety(-4)
+		return "%s не против. Trust %d, возбуждение %d, настроение %d." % [char.char_name, char.relation, char.arousal, char.mood_value]
+	if char.relation < 50:
+		char.change_relation(-2)
+		char.change_mood(-6)
+		char.change_anxiety(8)
+		return "%s: «Рановато». Trust %d." % [char.char_name, char.relation]
+	char.change_relation(6)
+	char.change_arousal(12)
+	char.change_mood(8)
+	char.change_anxiety(-6)
+	return "Поцелуй, %s. Trust %d, возбуждение %d, настроение %d." % [char.char_name, char.relation, char.arousal, char.mood_value]
+
+
 	var b = Button.new()
 	b.text = text + " (в разработке)"
 	b.custom_minimum_size = Vector2(200, 32)
@@ -629,8 +658,22 @@ func _show_group_actions():
 	if not action_menu or not action_list: return
 	for c in action_list.get_children(): c.queue_free()
 	var t = Label.new(); t.text = "Обе вместе"; t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; t.add_theme_font_size_override("font_size", 18); action_list.add_child(t)
-	for a in ["Прикоснуться", "Поцеловать", "Вместе (в разработке)"]:
-		_add_stub_button(a)
+	for a in ["Прикоснуться", "Поцеловать"]:
+		var who = a
+		var b = Button.new()
+		b.text = who
+		b.custom_minimum_size = Vector2(200, 36)
+		b.pressed.connect(func():
+			var kind = "touch" if who == "Прикоснуться" else "kiss"
+			if action_menu:
+				action_menu.visible = false
+			state.add_log(_apply_affection(state.lena, kind))
+			state.add_log(_apply_affection(state.masha, kind))
+			state.advance_time(1)
+			_refresh_all()
+		)
+		action_list.add_child(b)
+	_add_stub_button("Вместе")
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
 	action_menu.visible = true
 	action_menu.position = Vector2(430, 120)
@@ -654,6 +697,7 @@ func _start_group_dialog():
 		b.pressed.connect(func():
 			state.lena.change_relation(opt["rel"]); state.masha.change_relation(opt["rel"])
 			state.lena.change_arousal(opt["aru"]); state.masha.change_arousal(opt["aru"])
+			state.lena.change_mood(opt["rel"]); state.masha.change_mood(opt["rel"])
 			state.add_log("Ты: %s\n%s" % [opt["text"], opt["resp"]])
 			state.add_log("(Trust %+d, Lust %+d обеим)" % [opt["rel"], opt["aru"]])
 			state.advance_time(1); popup.queue_free(); _refresh_all()
@@ -780,6 +824,7 @@ func _show_dialogue_box(char: CharacterData, dialog: Dictionary):
 		b.pressed.connect(func():
 			char.change_relation(opt["relation"])
 			char.change_arousal(opt["arousal"])
+			char.change_mood(opt["relation"] * 2)
 			state.add_log("Ты: %s\n%s: %s" % [opt["text"], char.char_name, opt["response"]])
 			state.advance_time(1)
 			if is_instance_valid(box):
