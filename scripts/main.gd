@@ -778,6 +778,8 @@ func _execute_action(aid: String, hours: int, char: CharacterData):
 		"look": r = Interactions.look_at(char)
 		"touch": r = Interactions.touch(char)
 		"kiss": r = Interactions.kiss(char)
+		"peep": r = Interactions.peep(char)
+		"sleep": r = Interactions.sleep_together(char)
 		"undress", "sex_m", "sex_d", "sex_c", "sex_o", "sex_s", "hand", "blanket", "wake_nsfw":
 			if char.is_asleep() or char.is_vulnerable() or char.state != "бодрствует":
 				r = "%s не в сознании." % char.char_name
