@@ -502,7 +502,7 @@ func _show_char_menu(char: CharacterData):
 	title.add_theme_font_size_override("font_size", 18)
 	action_list.add_child(title)
 	var sub = Label.new()
-	sub.text = "Trust %d · %s" % [char.relation, char.state]
+	sub.text = "Trust %d · %s · %s" % [char.relation, char.mood, char.emotion]
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	action_list.add_child(sub)
 	action_list.add_child(HSeparator.new())
@@ -569,10 +569,12 @@ func _wake_character(char: CharacterData):
 	stealth_mode = false
 	if char.relation >= 60:
 		char.change_relation(2)
+		char.change_mood(6)
 		char.anxiety = maxi(0, char.anxiety - 10)
 		state.add_log("%s просыпается спокойно. «Что случилось?»" % char.char_name)
 	elif char.relation >= 40:
 		char.change_relation(-4)
+		char.change_mood(-8)
 		char.change_anxiety(12)
 		state.add_log("%s просыпается недовольно. Trust -4, тревожность %d%%." % [char.char_name, char.anxiety])
 	else:

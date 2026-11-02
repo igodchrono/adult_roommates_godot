@@ -16,7 +16,8 @@ var offended_days: int = 0
 var energy: int = 75
 var hunger: int = 70
 var hygiene: int = 80
-var mood_value: int = 60
+var emotion: String = "спокойствие"
+var shown_emotion: String = ""
 
 var effects := {
 	"no_sleep_night": false,
@@ -73,18 +74,52 @@ func tick_needs(hours: int, asleep: bool):
 		if offended_days > 0:
 			base -= 15
 		mood_value = clampi(base, 0, 100)
-		if mood_value < 30:
-			mood = "плохое"
-		elif mood_value < 55:
-			mood = "нейтральное"
-		else:
-			mood = "хорошее"
+		_set_mood_word()
+		refresh_emotion()
+
+func change_mood(delta: int):
+	mood_value = clampi(mood_value + delta, 0, 100)
+	_set_mood_word()
+	refresh_emotion()
+
+func _set_mood_word():
+	if mood_value < 30:
+		mood = "плохое"
+	elif mood_value < 55:
+		mood = "нейтральное"
+	elif mood_value < 75:
+		mood = "хорошее"
+	else:
+		mood = "отличное"
+
+func refresh_emotion() -> String:
+	if offended_days > 0:
+		emotion = "обида"
+	elif is_asleep():
+		emotion = "спит"
+	elif energy < 25:
+		emotion = "усталость"
+	elif hunger < 30:
+		emotion = "голод"
+	elif hygiene < 30:
+		emotion = "дискомфорт"
+	elif anxiety >= 45:
+		emotion = "раздражение"
+	elif mood_value >= 75:
+		emotion = "радость"
+	elif mood_value >= 50:
+		emotion = "спокойствие"
+	else:
+		emotion = "раздражение"
+	return emotion
 
 func restore_hunger():
 	hunger = clampi(hunger + 50, 0, 100)
+	change_mood(8)
 
 func restore_hygiene():
 	hygiene = clampi(hygiene + 45, 0, 100)
+	change_mood(5)
 
 func clear_daily_effects():
 	effects["need_toilet"] = false
@@ -130,4 +165,4 @@ func status_short() -> String:
 		extra = " [drunk %d]" % drunk_level
 	elif anxiety > 0:
 		extra = " [трев %d%%]" % anxiety
-	return "%s: T%d Э%d Г%d Ч%d | %s%s" % [char_name, relation, energy, hunger, hygiene, state, extra]
+	return "%s: T%d Э%d Г%d | %s, %s%s" % [char_name, relation, energy, hunger, emotion, state, extra]

@@ -83,22 +83,27 @@ func apply_schedule():
 			continue
 		if char.state == "отключка" or char.effects.get("deep_sleep", false):
 			_place(char, "комната_лены" if char.key == "lena" else "комната_маши", char.state, "")
+			_react_emotion(char)
 			continue
 		if char.energy < 25 and (get_period() == "ночь" or char.energy < 12) and not char.effects.get("no_sleep_night", false):
 			var room = "комната_лены" if char.key == "lena" else "комната_маши"
 			if char.state != "спит":
 				_randomize_sleep_state(char)
 			_place(char, room, "спит", "%s устала и легла спать." % char.char_name)
+			_react_emotion(char)
 			continue
 		if char.hunger < 30 and get_period() != "ночь":
 			_place(char, "кухня", "ест", "%s проголодалась и пошла на кухню." % char.char_name)
+			_react_emotion(char)
 			continue
 		if char.hygiene < 30 and get_period() != "ночь" and _get_scheduled(char.key, day, hour) != "работа":
 			_place(char, "ванная", "умывается", "%s пошла умываться." % char.char_name)
+			_react_emotion(char)
 			continue
 		var planned = _get_scheduled(char.key, day, hour)
 		if planned == "работа":
 			_place(char, "работа", "бодрствует", "")
+			_react_emotion(char)
 			continue
 		var next_state = "бодрствует"
 		if get_period() == "ночь" and not char.effects.get("no_sleep_night", false):
@@ -113,6 +118,34 @@ func apply_schedule():
 			if char.clothes == "голая" and not char.effects.get("deep_sleep", false):
 				char.set_clothes("домашняя")
 		_place(char, planned, next_state, "")
+		_react_emotion(char)
+
+func _react_emotion(char: CharacterData):
+	if char.is_asleep():
+		return
+	if player_location != char.location:
+		return
+	if char.emotion == char.shown_emotion:
+		return
+	char.shown_emotion = char.emotion
+	add_log("%s (%s): %s" % [char.char_name, char.mood, _emotion_line(char)])
+
+func _emotion_line(char: CharacterData) -> String:
+	match char.emotion:
+		"обида":
+			return "Не хочет разговаривать."
+		"усталость":
+			return "Еле держится на ногах."
+		"голод":
+			return "Хочет есть."
+		"дискомфорт":
+			return "Хочет в ванную."
+		"раздражение":
+			return "Лучше её сейчас не трогать."
+		"радость":
+			return "Улыбается."
+		_:
+			return "Выглядит спокойно."
 
 func _place(char: CharacterData, loc: String, next_state: String, msg: String):
 	var changed = char.location != loc or char.state != next_state
