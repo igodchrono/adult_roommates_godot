@@ -23,8 +23,8 @@ var midnight_warned: bool = false
 signal midnight_reached
 
 func _ready():
-	lena = CharacterData.new("lena", "Лена", 24)
-	masha = CharacterData.new("masha", "Маша", 22)
+	lena = CharacterData.new("lena", "Лена", 23)
+	masha = CharacterData.new("masha", "Маша", 40)
 	apply_schedule()
 
 func get_time_str() -> String:
