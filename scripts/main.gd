@@ -392,22 +392,25 @@ func _draw_toilet():
 			)
 			v.add_child(peep_btn)
 
-			# High trust: enter for NSFW
-			if char.relation >= 65 or char.is_vulnerable():
-				var enter_btn = Button.new()
-				enter_btn.text = "Зайти к ней (NSFW)"
-				enter_btn.custom_minimum_size = Vector2(380, 40)
-				enter_btn.pressed.connect(func():
-					state.add_log("Ты входишь в туалет к %s..." % char.char_name)
-					_show_char_menu(char)
-				)
-				v.add_child(enter_btn)
-			else:
+			if char.is_asleep() or char.is_vulnerable():
 				var locked = Label.new()
-				locked.text = "Зайти можно при Trust ≥ 65\n(или если пьяная / под снотворным)"
+				locked.text = "Пока не в сознании — только подсмотреть."
 				locked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				locked.add_theme_color_override("font_color", Color(0.75, 0.7, 0.4))
 				v.add_child(locked)
+			elif char.relation < 60:
+				var locked = Label.new()
+				locked.text = "Кнопка 1 откроется при Trust ≥ 60"
+				locked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				v.add_child(locked)
+			else:
+				_add_kernel_button(v, char, "Кнопка 1", "slot_1", 4, 6)
+				if char.relation >= 80 and char.arousal >= 60:
+					_add_kernel_button(v, char, "Кнопка 2", "slot_2", 6, 8)
+				else:
+					var next = Label.new()
+					next.text = "Кнопка 2: Trust ≥ 80 и возбуждение ≥ 60"
+					next.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					v.add_child(next)
 
 	var leave = Button.new()
 	leave.text = "Уйти"
@@ -419,6 +422,32 @@ func _draw_toilet():
 	v.add_child(leave)
 	character_container.add_child(panel)
 
+func _add_kernel_button(box: VBoxContainer, char: CharacterData, title: String, slot: String, rel_gain: int, ar_gain: int):
+	var b = Button.new()
+	b.text = title
+	b.custom_minimum_size = Vector2(380, 40)
+	b.pressed.connect(func():
+		char.change_relation(rel_gain)
+		char.change_arousal(ar_gain)
+		char.change_mood(3)
+		state.add_log("<....>")
+		_show_square(slot)
+		state.advance_time(1)
+		_refresh_all()
+	)
+	box.add_child(b)
+
+func _show_square(slot: String):
+	if has_node("SlotPreview"):
+		$SlotPreview.queue_free()
+	var rect = TextureRect.new()
+	rect.name = "SlotPreview"
+	rect.texture = load_tex("res://assets/ui/%s.png" % slot)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.custom_minimum_size = Vector2(160, 160)
+	rect.position = Vector2(40, 80)
+	rect.z_index = 25
+	character_container.add_child(rect)
 
 func _draw_bathroom():
 	var people = state.get_people_in_location("ванная")
