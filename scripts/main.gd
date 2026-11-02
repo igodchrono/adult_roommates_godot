@@ -688,18 +688,6 @@ func _apply_affection(char: CharacterData, kind: String) -> String:
 	char.change_anxiety(-6)
 	return "Поцелуй, %s. Trust %d, возбуждение %d, настроение %d." % [char.char_name, char.relation, char.arousal, char.mood_value]
 
-
-	var b = Button.new()
-	b.text = text + " (в разработке)"
-	b.custom_minimum_size = Vector2(200, 32)
-	b.pressed.connect(func():
-		state.add_log("%s — в разработке." % text)
-		if action_menu:
-			action_menu.visible = false
-		_refresh_all()
-	)
-	action_list.add_child(b)
-
 func _wake_character(char: CharacterData):
 	if action_menu:
 		action_menu.visible = false
