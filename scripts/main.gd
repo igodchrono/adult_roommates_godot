@@ -127,6 +127,7 @@ func _update_room_bar():
 
 var stealth_mode: bool = false
 var stealth_target: CharacterData = null
+var kernel_hours: int = 0
 
 func load_tex(path: String) -> Texture2D:
 	if ResourceLoader.exists(path):
@@ -529,15 +530,7 @@ func _add_kernel_button(box: VBoxContainer, char: CharacterData, title: String, 
 	var b = Button.new()
 	b.text = title
 	b.custom_minimum_size = Vector2(380, 40)
-	b.pressed.connect(func():
-		char.change_relation(rel_gain)
-		char.change_arousal(ar_gain)
-		char.change_mood(3)
-		state.add_log("<....>")
-		_show_square(slot)
-		state.advance_time(1)
-		_refresh_all()
-	)
+	b.pressed.connect(func(): _run_kernel(char, slot, 1, rel_gain, ar_gain))
 	box.add_child(b)
 
 func _show_square(slot: String):
@@ -854,10 +847,51 @@ func _run_kernel(char: CharacterData, slot: String, hours: int, rel_gain: int, a
 	char.change_arousal(ar_gain)
 	char.change_mood(3)
 	state.add_log("<....>")
-	_show_square(slot)
-	if hours > 0:
-		state.advance_time(hours)
-	_refresh_all()
+	_open_time_lock(slot, hours)
+
+func _open_time_lock(slot: String, hours: int):
+	kernel_hours = maxi(kernel_hours, hours)
+	if has_node("KernelLock"):
+		return
+	var lock = Control.new()
+	lock.name = "KernelLock"
+	lock.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lock.mouse_filter = Control.MOUSE_FILTER_STOP
+	lock.z_index = 50
+	add_child(lock)
+	var dim = ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	lock.add_child(dim)
+	var rect = TextureRect.new()
+	rect.texture = load_tex("res://assets/ui/%s.png" % slot)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.set_anchors_preset(Control.PRESET_CENTER)
+	rect.offset_left = -140
+	rect.offset_right = 140
+	rect.offset_top = -200
+	rect.offset_bottom = 80
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lock.add_child(rect)
+	var exit_btn = Button.new()
+	exit_btn.text = "Выйти"
+	exit_btn.set_anchors_preset(Control.PRESET_CENTER)
+	exit_btn.offset_left = -90
+	exit_btn.offset_right = 90
+	exit_btn.offset_top = 110
+	exit_btn.offset_bottom = 156
+	exit_btn.pressed.connect(func():
+		var h = kernel_hours
+		kernel_hours = 0
+		lock.queue_free()
+		if h > 0:
+			state.advance_time(h)
+			state.add_log("[+%d ч] → %s" % [h, state.get_time_str()])
+		_refresh_all()
+	)
+	lock.add_child(exit_btn)
 
 func _execute_action(aid: String, hours: int, char: CharacterData):
 	var r = ""
@@ -874,7 +908,11 @@ func _execute_action(aid: String, hours: int, char: CharacterData):
 				char.change_relation(4)
 				char.change_arousal(6)
 				r = "<....>"
-				_show_square("slot_1")
+				_open_time_lock("slot_1", hours)
+				state.add_log(r)
+				if action_menu:
+					action_menu.visible = false
+				return
 	state.add_log(r)
 	show_action_image(aid, char)
 	if not stealth_mode and hours > 0:
