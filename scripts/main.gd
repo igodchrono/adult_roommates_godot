@@ -39,11 +39,15 @@ func _ready():
 	money_label.add_theme_font_size_override("font_size", 15)
 	money_label.add_theme_color_override("font_color", Color(0.5, 1.0, 0.6))
 	$TopBar/HBox.add_child(money_label)
+	var journal = Button.new()
+	journal.text = "Журнал"
+	journal.pressed.connect(_open_journal)
+	$TopBar/HBox.add_child(journal)
 	_update_money()
 	_build_room_bar()
 	_apply_ui()
 	_refresh_all()
-	state.add_log("Работа: 8ч=+1000. Магазин: покупки. Обе вместе → общие действия.")
+	state.add_log("Журнал сверху. Время идёт от сна, ванной или туалета, если там пусто.")
 
 func _apply_ui():
 	var theme = Theme.new()
@@ -67,9 +71,7 @@ func _apply_ui():
 	$CharacterContainer.offset_top = 64
 	$CharacterContainer.offset_right = 0
 	$CharacterContainer.offset_bottom = -92
-	$SidePanel.offset_left = -280
-	$SidePanel.offset_top = 66
-	$SidePanel.offset_bottom = -100
+	$SidePanel.visible = false
 	$BottomBar.offset_top = -84
 	if action_menu:
 		action_menu.custom_minimum_size = Vector2(280, 0)
@@ -97,6 +99,54 @@ func _open_action_menu():
 	action_menu.offset_top = 110
 	action_menu.offset_bottom = 560
 	action_menu.z_index = 30
+
+func _open_journal():
+	if has_node("Journal"):
+		$Journal.queue_free()
+		return
+	var box = PanelContainer.new()
+	box.name = "Journal"
+	box.z_index = 40
+	box.set_anchors_preset(Control.PRESET_CENTER)
+	box.offset_left = -360
+	box.offset_right = 360
+	box.offset_top = -280
+	box.offset_bottom = 280
+	add_child(box)
+	var margin = MarginContainer.new()
+	for s in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(s, 16)
+	box.add_child(margin)
+	var v = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	margin.add_child(v)
+	var title = Label.new()
+	title.text = "Журнал"
+	title.add_theme_font_size_override("font_size", 22)
+	v.add_child(title)
+	for c in [state.lena, state.masha]:
+		var card = Label.new()
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.text = "%s, %d\n%s\nДоверие %d   Возбуждение %d   Настроение %d (%s)\nЭнергия %d   Голод %d   Чистота %d\nСейчас: %s, %s" % [c.char_name, c.age, _bio(c.key), c.relation, c.arousal, c.mood_value, c.mood, c.energy, c.hunger, c.hygiene, c.location, c.state]
+		v.add_child(card)
+		v.add_child(HSeparator.new())
+	var log = Label.new()
+	log.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var lines: PackedStringArray = []
+	var start = maxi(0, state.log_messages.size() - 6)
+	for i in range(start, state.log_messages.size()):
+		lines.append(state.log_messages[i])
+	log.text = "Последнее:\n" + "\n".join(lines)
+	v.add_child(log)
+	var close = Button.new()
+	close.text = "Закрыть"
+	close.pressed.connect(func(): box.queue_free())
+	v.add_child(close)
+
+func _bio(key: String) -> String:
+	if key == "lena":
+		return "23 года. Короче в разговоре, в будни на работе, вечером чаще в зале. К чужим держится холодно, пока доверие не вырастет."
+	return "40 лет. Спокойнее и мягче. Позже встаёт, свой ритм ванной и работы. Тепло отвечает, если её не торопить."
 
 func _update_money():
 	if money_label: money_label.text = "%d" % state.money
@@ -354,7 +404,7 @@ func _draw_scene():
 
 	if people.is_empty():
 		var p = PanelContainer.new(); p.position = Vector2(250, 140); p.custom_minimum_size = Vector2(300, 90)
-		var l = Label.new(); l.text = "Никого нет\nПозови или смени комнату"; l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var l = Label.new(); l.text = "Никого нет"; l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		p.add_child(l); character_container.add_child(p); return
 	_place_sprites(people)
 
@@ -375,6 +425,13 @@ func _draw_my_room():
 		_refresh_all()
 	)
 	v.add_child(sleep_b)
+	var nap = Button.new()
+	nap.text = "Вздремнуть (1ч)"
+	nap.pressed.connect(func():
+		state.add_log(state.rest(1, "вздремнул"))
+		_refresh_all()
+	)
+	v.add_child(nap)
 	var coffee_b = Button.new()
 	var n = state.inventory.get("кофе", 0)
 	coffee_b.text = "Выпить кофе (%d)" % n
@@ -405,10 +462,9 @@ func _place_sprites(people: Array):
 		var x = 620.0 if count == 1 else (380.0 + i * 260.0)
 		btn.position = Vector2(x, -10)
 		btn.pivot_offset = Vector2(140, 260)
-		btn.modulate = _emotion_color(char.emotion)
+		btn.modulate = Color(1, 1, 1)
 		btn.pressed.connect(_show_char_menu.bind(char))
 		character_container.add_child(btn)
-		_play_emotion(btn, char, x)
 		var name = Label.new()
 		name.text = char.char_name
 		name.position = Vector2(x + 80, 490)
@@ -481,6 +537,13 @@ func _draw_toilet():
 		empty.text = "Никого нет."
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(empty)
+		var use = Button.new()
+		use.text = "Сходить в туалет (1ч)"
+		use.pressed.connect(func():
+			state.add_log(state.rest(1, "сходил в туалет"))
+			_refresh_all()
+		)
+		v.add_child(use)
 	else:
 		for char in people:
 			var info = Label.new()
@@ -579,6 +642,13 @@ func _draw_bathroom():
 		empty.text = "Никого нет."
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(empty)
+		var bath = Button.new()
+		bath.text = "Принять ванную (1ч)"
+		bath.pressed.connect(func():
+			state.add_log(state.rest(1, "принял ванную"))
+			_refresh_all()
+		)
+		v.add_child(bath)
 	else:
 		for char in people:
 			var info = Label.new()
