@@ -72,6 +72,9 @@ func _apply_ui():
 	theme.set_color("default_color", "RichTextLabel", Color(0.9, 0.88, 0.9))
 	set_theme(theme)
 	$TopBar.offset_bottom = 58
+	$TopBar.z_index = 10
+	$BottomBar.z_index = 10
+	$CharacterContainer.z_index = 2
 	$CharacterContainer.offset_left = 0
 	$CharacterContainer.offset_top = 64
 	$CharacterContainer.offset_right = 0
@@ -212,29 +215,29 @@ func show_action_image(action_id: String, char: CharacterData):
 	var path = "res://assets/characters/%s/action_%s.png" % [char.key, action_id]
 	var tex = load_tex(path)
 	if tex == null:
-		# fallback to state image
 		tex = load_char_tex(char)
 	if tex == null:
 		return
-	var popup = Window.new()
-	popup.title = "%s — %s" % [char.char_name, action_id]
-	popup.size = Vector2i(520, 640)
-	popup.unresizable = true
-	add_child(popup)
-	popup.popup_centered()
+	if has_node("VnSprite"):
+		$VnSprite.queue_free()
 	var rect = TextureRect.new()
+	rect.name = "VnSprite"
 	rect.texture = tex
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	popup.add_child(rect)
-	var close = Button.new()
-	close.text = "Закрыть"
-	close.position = Vector2(210, 580)
-	close.pressed.connect(func(): popup.queue_free())
-	popup.add_child(close)
+	rect.z_index = 4
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.offset_left = 280
+	rect.offset_top = 48
+	rect.offset_right = -20
+	rect.offset_bottom = -108
+	add_child(rect)
+	move_child(rect, 1)
 
 func _on_room(loc: String):
+	if has_node("VnSprite"):
+		$VnSprite.queue_free()
 	if action_menu:
 		action_menu.visible = false
 	if loc in ["комната_лены", "комната_маши"]:
