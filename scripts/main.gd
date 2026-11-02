@@ -496,105 +496,97 @@ func _make_char_card(char: CharacterData) -> PanelContainer:
 func _show_char_menu(char: CharacterData):
 	if not action_menu or not action_list: return
 	for c in action_list.get_children(): c.queue_free()
-	var title = Label.new(); title.text = char.char_name; title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; title.add_theme_font_size_override("font_size", 18); action_list.add_child(title)
-	var sub = Label.new(); sub.text = "Trust %d · Lust %d" % [char.relation, char.arousal]; sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; action_list.add_child(sub)
+	var title = Label.new()
+	title.text = char.char_name
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	action_list.add_child(title)
+	var sub = Label.new()
+	sub.text = "Trust %d · %s" % [char.relation, char.state]
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	action_list.add_child(sub)
 	action_list.add_child(HSeparator.new())
-	var asleep = char.is_asleep() or char.is_vulnerable()
-	var all_a = [
-		["Смотреть", 0, "look", 0, 0],
-		["Диалог", 1, "dialog", 0, 0],
-		["Прикоснуться", 1, "touch", 25, 0],
-		["Подсмотреть", 1, "peep", 30, 0],
-		["Снять одеяло", 0, "blanket", 0, 0],
-		["Поцеловать", 1, "kiss", 45, 20],
-		["Раздеть", 1, "undress", 55, 35],
-		["Спать вместе", 8, "sleep", 50, 0],
-		["Оральный", 2, "sex_o", 60, 45],
-		["Миссионерская", 2, "sex_m", 65, 50],
-		["Собачка", 2, "sex_d", 70, 55],
-		["Наездница", 2, "sex_c", 70, 55],
-		["Секс во сне", 2, "sex_s", 40, 0],
-		["Разбудить для NSFW", 1, "wake_nsfw", 70, 60],
-	]
-	var shown = 0
-	for a in all_a:
-		var ok = false
-		var id = a[2]
-		# Progressive sleep NSFW: blanket -> undress -> deep acts
-		# Without blanket/undress only: touch, look, peep, handjob, oral sleep
-		if asleep:
-			var naked = char.clothes == "голая"
-			var uncovered = not char.has_blanket
-			match id:
-				"look", "peep", "touch":
-					ok = true
-				"blanket":
-					ok = char.has_blanket
-				"undress":
-					ok = (uncovered or char.is_vulnerable()) and not naked
-				"hand":
-					ok = true  # hand while sleep always possible (stealth)
-				"sex_o":
-					ok = true  # oral while sleep basic
-				"kiss":
-					ok = uncovered or char.is_vulnerable()
-				"sex_s", "sex_m", "sex_d", "sex_c":
-					# full NSFW only after blanket off AND naked
-					ok = uncovered and naked
-				"wake_nsfw":
-					ok = char.can_wake_for_nsfw() or char.is_vulnerable()
-				"dialog", "sleep":
-					ok = false
-				_:
-					ok = char.relation >= a[3] and char.arousal >= a[4]
-		else:
-			if id in ["sex_s", "blanket", "hand"]:
-				ok = false
-			elif id == "undress" and char.clothes == "голая":
-				ok = false
-			else:
-				ok = char.relation >= a[3] and char.arousal >= a[4]
-		if not ok:
-			continue
-		shown += 1
-		var b = Button.new()
-		b.text = a[0]
-		b.custom_minimum_size = Vector2(200, 32)
-		if id == "dialog":
-			b.pressed.connect(_start_dialog.bind(char))
-		else:
-			b.pressed.connect(_do_action.bind(id, a[1], char))
-		action_list.add_child(b)
-	if shown <= 2 and not asleep:
-		var h = Label.new()
-		h.text = "Больше при росте Trust/Lust"
-		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		h.add_theme_color_override("font_color", Color(0.75, 0.7, 0.4))
-		action_list.add_child(h)
-	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
+	var asleep = char.is_asleep()
+	if asleep:
+		_add_action_button("Смотреть", func(): _execute_action("look", 0, char))
+		_add_action_button("Разбудить", func(): _wake_character(char))
+		var note = Label.new()
+		note.text = "Остальные действия — в разработке,\nпока человек спит их нет."
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		action_list.add_child(note)
+	else:
+		_add_action_button("Смотреть", func(): _execute_action("look", 0, char))
+		_add_action_button("Диалог", func(): _start_dialog(char))
+		for stub in ["Прикоснуться", "Поцеловать", "Раздеть"]:
+			if char.relation >= 40:
+				_add_stub_button(stub)
+		if char.relation < 40:
+			var h = Label.new()
+			h.text = "Ближе — когда Trust выше"
+			h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			action_list.add_child(h)
+	var cb = Button.new()
+	cb.text = "Закрыть"
+	cb.pressed.connect(func(): action_menu.visible = false)
+	action_list.add_child(cb)
 	action_menu.visible = true
 	action_menu.position = Vector2(430, 120)
 	action_menu.z_index = 20
+
+func _add_action_button(text: String, cb: Callable):
+	var b = Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(200, 32)
+	b.pressed.connect(cb)
+	action_list.add_child(b)
+
+func _add_stub_button(text: String):
+	var b = Button.new()
+	b.text = text + " (в разработке)"
+	b.custom_minimum_size = Vector2(200, 32)
+	b.pressed.connect(func():
+		state.add_log("%s — в разработке." % text)
+		if action_menu:
+			action_menu.visible = false
+		_refresh_all()
+	)
+	action_list.add_child(b)
+
+func _wake_character(char: CharacterData):
+	if action_menu:
+		action_menu.visible = false
+	if char.effects.get("deep_sleep", false) or char.drunk_level >= 2 or char.state == "отключка":
+		state.add_log("%s слишком крепко спит и не просыпается." % char.char_name)
+		char.change_anxiety(5)
+		_refresh_all()
+		return
+	char.set_state("бодрствует")
+	char.has_blanket = true
+	if char.clothes == "голая":
+		char.set_clothes("домашняя")
+	char.effects["no_sleep_night"] = true
+	stealth_mode = false
+	if char.relation >= 60:
+		char.change_relation(2)
+		char.anxiety = maxi(0, char.anxiety - 10)
+		state.add_log("%s просыпается спокойно. «Что случилось?»" % char.char_name)
+	elif char.relation >= 40:
+		char.change_relation(-4)
+		char.change_anxiety(12)
+		state.add_log("%s просыпается недовольно. Trust -4, тревожность %d%%." % [char.char_name, char.anxiety])
+	else:
+		char.change_anxiety(30)
+		state.add_log("%s просыпается злая." % char.char_name)
+		state.kick_out(char)
+	_refresh_all()
 
 func _show_group_actions():
 	if not action_menu or not action_list: return
 	for c in action_list.get_children(): c.queue_free()
 	var t = Label.new(); t.text = "Обе вместе"; t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; t.add_theme_font_size_override("font_size", 18); action_list.add_child(t)
-	for a in [["Раздеть обеих", "both_undress", 1], ["Трогать обеих", "both_touch", 1], ["Целовать обеих", "both_kiss", 1], ["Секс втроём", "threesome", 2]]:
-		var b = Button.new(); b.text = a[0]; b.custom_minimum_size = Vector2(200, 36)
-		b.pressed.connect(func():
-			var r = ""
-			match a[1]:
-				"both_undress": r = Interactions.both_undress(state.lena, state.masha)
-				"both_touch": r = Interactions.touch(state.lena) + "\n" + Interactions.touch(state.masha)
-				"both_kiss": r = Interactions.kiss(state.lena) + "\n" + Interactions.kiss(state.masha)
-				"threesome": r = Interactions.threesome_missionary(state.lena, state.masha)
-			state.add_log(r)
-			state.advance_time(a[2])
-			state.add_log("[+%d ч] → %s" % [a[2], state.get_time_str()])
-			action_menu.visible = false
-			_refresh_all()
-		); action_list.add_child(b)
+	for a in ["Прикоснуться", "Поцеловать", "Вместе (в разработке)"]:
+		_add_stub_button(a)
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
 	action_menu.visible = true
 	action_menu.position = Vector2(430, 120)
