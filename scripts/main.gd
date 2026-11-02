@@ -299,8 +299,11 @@ func _place_sprites(people: Array):
 		btn.size = Vector2(280, 520)
 		var x = 620.0 if count == 1 else (380.0 + i * 260.0)
 		btn.position = Vector2(x, -10)
+		btn.pivot_offset = Vector2(140, 260)
+		btn.modulate = _emotion_color(char.emotion)
 		btn.pressed.connect(_show_char_menu.bind(char))
 		character_container.add_child(btn)
+		_play_emotion(btn, char, x)
 		var name = Label.new()
 		name.text = char.char_name
 		name.position = Vector2(x + 80, 490)
@@ -313,6 +316,45 @@ func _place_sprites(people: Array):
 		both.position = Vector2(40, 40)
 		both.pressed.connect(_show_group_actions)
 		character_container.add_child(both)
+
+func _emotion_color(emotion: String) -> Color:
+	match emotion:
+		"радость":
+			return Color(1, 0.92, 0.55)
+		"обида":
+			return Color(0.75, 0.65, 0.8)
+		"усталость":
+			return Color(0.7, 0.78, 0.95)
+		"голод":
+			return Color(1, 0.78, 0.55)
+		"дискомфорт":
+			return Color(0.7, 0.9, 0.85)
+		"раздражение":
+			return Color(1, 0.65, 0.6)
+		"спит":
+			return Color(0.65, 0.65, 0.75)
+		_:
+			return Color(1, 1, 1)
+
+func _play_emotion(btn: Control, char: CharacterData, x: float):
+	var bubble = Label.new()
+	bubble.text = char.emotion
+	bubble.position = Vector2(x + 70, 24)
+	bubble.add_theme_font_size_override("font_size", 20)
+	bubble.add_theme_color_override("font_color", _emotion_color(char.emotion))
+	bubble.modulate.a = 0.0
+	character_container.add_child(bubble)
+	var pop = bubble.create_tween()
+	pop.tween_property(bubble, "modulate:a", 1.0, 0.25)
+	pop.parallel().tween_property(bubble, "position:y", 8.0, 0.35)
+	var bob = bubble.create_tween()
+	bob.tween_interval(0.35)
+	bob.set_loops()
+	bob.tween_property(bubble, "position:y", 0.0, 0.7)
+	bob.tween_property(bubble, "position:y", 14.0, 0.7)
+	var pulse = btn.create_tween()
+	pulse.tween_property(btn, "scale", Vector2(1.05, 1.05), 0.28)
+	pulse.tween_property(btn, "scale", Vector2.ONE, 0.28)
 
 func _draw_toilet():
 	var people = state.get_people_in_location("туалет")
