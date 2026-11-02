@@ -566,8 +566,10 @@ func _show_group_actions():
 				"both_kiss": r = Interactions.kiss(state.lena) + "\n" + Interactions.kiss(state.masha)
 				"threesome": r = Interactions.threesome_missionary(state.lena, state.masha)
 			state.add_log(r)
-	show_action_image(aid, char); state.advance_time(a[2]); state.add_log("[+%d ч] → %s" % [a[2], state.get_time_str()])
-			action_menu.visible = false; _refresh_all()
+			state.advance_time(a[2])
+			state.add_log("[+%d ч] → %s" % [a[2], state.get_time_str()])
+			action_menu.visible = false
+			_refresh_all()
 		); action_list.add_child(b)
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
 	action_menu.visible = true
