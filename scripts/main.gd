@@ -119,6 +119,13 @@ func show_action_image(action_id: String, char: CharacterData):
 	popup.add_child(close)
 
 func _on_room(loc: String):
+	if action_menu:
+		action_menu.visible = false
+	if loc in ["комната_лены", "комната_маши"]:
+		var inside = state.get_people_in_location(loc)
+		if inside.size() > 0 and state.player_location != loc:
+			_show_door(loc, inside[0])
+			return
 	var check = state.can_enter_room(loc)
 	if not check["ok"]:
 		state.add_log(check["reason"])
@@ -126,95 +133,112 @@ func _on_room(loc: String):
 		return
 	state.player_location = loc
 	state.add_log("→ " + loc)
-	if action_menu: action_menu.visible = false
-
-	var people = state.get_people_in_location(loc)
-	var sleeper: CharacterData = null
-	for p in people:
-		if p.is_asleep():
-			sleeper = p
-			break
-
-	if check.get("stealth", false) or (sleeper != null and sleeper.needs_stealth()):
-		stealth_mode = true
-		stealth_target = sleeper if sleeper else (people[0] if people.size() > 0 else null)
-		state.add_log(check.get("reason", "Осторожно..."))
-		_refresh_all()
-		if stealth_target:
-			_show_sleep_choices(stealth_target)
-		return
-
 	stealth_mode = false
 	stealth_target = null
 	if state.is_night() and loc == "моя_комната":
-		state.add_log("🌙 Ночь. Пора спать... Или выпей кофе и рискни зайти к ним.")
+		state.add_log("Ночь. Пора спать, или выпей кофе.")
 	_refresh_all()
 
-func _show_sleep_choices(char: CharacterData):
+func _activity_label(char: CharacterData) -> String:
+	if char.is_asleep():
+		return "спит"
+	if char.location in ["комната_лены", "комната_маши"] and state.hour in [6, 7, 8, 21, 22]:
+		return "переодевается"
+	return "бодрствует"
+
+func _show_door(loc: String, char: CharacterData):
 	var popup = Window.new()
-	popup.title = char.char_name + " спит"
-	popup.size = Vector2i(360, 280)
+	popup.title = "Дверь"
+	popup.size = Vector2i(380, 340)
 	popup.unresizable = true
 	add_child(popup)
 	popup.popup_centered()
-
 	var m = MarginContainer.new()
 	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for s in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		m.add_theme_constant_override(s, 16)
 	popup.add_child(m)
-
 	var v = VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 8)
 	m.add_child(v)
-
 	var info = Label.new()
-	info.text = "%s спит.\nТревожность: %d%%\nЧто сделать?" % [char.char_name, char.anxiety]
+	info.text = "%s: %s\nTrust %d  ·  тревожность %d%%\nТы ещё снаружи." % [char.char_name, _activity_label(char), char.relation, char.anxiety]
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(info)
 
-	var b_wake = Button.new()
-	b_wake.text = "Разбудить"
-	b_wake.custom_minimum_size = Vector2(300, 40)
-	b_wake.pressed.connect(func():
+	var b_peep = Button.new()
+	b_peep.text = "Подсмотреть"
+	b_peep.custom_minimum_size = Vector2(320, 36)
+	b_peep.pressed.connect(func():
 		popup.queue_free()
-		if char.can_wake_for_nsfw() or char.is_vulnerable():
-			char.set_state("бодрствует")
-			state.add_log("Ты будишь %s..." % char.char_name)
-			stealth_mode = false
-			_show_char_menu(char)
-		else:
-			# Risky wake — mini-game or fail
-			state.add_log("Пытаешься разбудить осторожно...")
-			_start_minigame("wake_nsfw", 1, char)
+		_start_minigame("peep", 0, char)
 	)
-	v.add_child(b_wake)
+	v.add_child(b_peep)
 
-	var b_undress = Button.new()
-	b_undress.text = "Раздеть"
-	b_undress.custom_minimum_size = Vector2(300, 40)
-	b_undress.pressed.connect(func():
+	var b_in = Button.new()
+	b_in.text = "Войти"
+	b_in.custom_minimum_size = Vector2(320, 36)
+	b_in.pressed.connect(func():
 		popup.queue_free()
-		if char.is_vulnerable():
-			_execute_action("undress", 0, char)
-		else:
-			_start_minigame("undress", 0, char)
+		_enter_room(loc, char, false)
 	)
-	v.add_child(b_undress)
+	v.add_child(b_in)
+
+	var b_quiet = Button.new()
+	b_quiet.text = "Войти тихо"
+	b_quiet.custom_minimum_size = Vector2(320, 36)
+	b_quiet.pressed.connect(func():
+		popup.queue_free()
+		_enter_room(loc, char, true)
+	)
+	v.add_child(b_quiet)
 
 	var b_leave = Button.new()
 	b_leave.text = "Уйти"
-	b_leave.custom_minimum_size = Vector2(300, 40)
-	b_leave.pressed.connect(func():
-		popup.queue_free()
+	b_leave.custom_minimum_size = Vector2(320, 36)
+	b_leave.pressed.connect(func(): popup.queue_free())
+	v.add_child(b_leave)
+
+func _enter_room(loc: String, char: CharacterData, quiet: bool):
+	if char.offended_days > 0 and not char.is_vulnerable():
+		state.add_log("%s обижена и не пускает." % char.char_name)
+		_refresh_all()
+		return
+	if not char.is_asleep() and not char.is_vulnerable() and char.relation < 40:
+		state.add_log("%s не пускает. (Trust < 40)" % char.char_name)
+		_refresh_all()
+		return
+	state.player_location = loc
+	if quiet:
+		stealth_mode = true
+		stealth_target = char
+		var stress = 20 - int(char.relation / 8.0) - int(char.arousal / 15.0)
+		stress = clampi(stress, 2, 25)
+		if char.is_vulnerable():
+			stress = 0
+		char.change_anxiety(stress)
+		state.add_log("Тихий вход. %s не проснулась. Тревожность +%d (%d%%)." % [char.char_name, stress, char.anxiety])
+		if char.anxiety >= 100:
+			state.kick_out(char)
+			stealth_mode = false
+			stealth_target = null
+	else:
 		stealth_mode = false
 		stealth_target = null
-		state.player_location = "зал"
-		state.add_log("Ты тихо уходишь. → зал")
-		_refresh_all()
-	)
-	v.add_child(b_leave)
+		var wakes = char.is_asleep() and not char.is_vulnerable() and char.relation < 55 and state.is_night()
+		if wakes:
+			char.set_state("бодрствует")
+			char.has_blanket = true
+			if char.clothes == "голая":
+				char.set_clothes("домашняя")
+			char.change_anxiety(35)
+			state.add_log("Ты вошёл. %s проснулась." % char.char_name)
+			if char.relation < 40 or char.anxiety >= 100:
+				state.kick_out(char)
+		else:
+			state.add_log("Ты вошёл к %s." % char.char_name)
+	_refresh_all()
 
 func _refresh_all():
 	if top_bar: top_bar.text = "%s   %s   (%s)" % [state.day.capitalize(), state.get_time_str(), state.get_period()]
