@@ -211,6 +211,27 @@ func work() -> String:
 	money_changed.emit()
 	return "Ты отработал 8 часов. +1000. Баланс: %d" % money
 
+func chore_for(loc: String) -> Dictionary:
+	match loc:
+		"зал":
+			return {"name": "Убрать зал", "pay": 80}
+		"кухня":
+			return {"name": "Помыть посуду", "pay": 100}
+		"ванная":
+			return {"name": "Убрать ванную", "pay": 90}
+		"кладовка":
+			return {"name": "Разобрать кладовку", "pay": 70}
+	return {}
+
+func do_chore(loc: String) -> String:
+	var job = chore_for(loc)
+	if job.is_empty():
+		return "Здесь нет бытовой работы."
+	advance_time(1)
+	money += int(job["pay"])
+	money_changed.emit()
+	return "%s. +%d. Баланс: %d. Сейчас %s." % [job["name"], job["pay"], money, get_time_str()]
+
 func buy_item(item_key: String) -> String:
 	if not SHOP_PRICES.has(item_key):
 		return "Нет такого товара."

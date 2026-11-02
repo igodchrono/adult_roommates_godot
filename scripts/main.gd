@@ -308,7 +308,7 @@ func _enter_room(loc: String, char: CharacterData, quiet: bool):
 	_refresh_all()
 
 func _refresh_all():
-	if top_bar: top_bar.text = "%s  %s" % [state.day.capitalize(), state.get_time_str()]
+	if top_bar: top_bar.text = "%s  %s  ·  %s" % [state.day.capitalize(), state.get_time_str(), state.get_period()]
 	if lena_stats: lena_stats.text = _hud_line(state.lena)
 	if masha_stats: masha_stats.text = _hud_line(state.masha)
 	_update_money()
@@ -337,6 +337,7 @@ func _draw_scene():
 		_draw_bathroom(); return
 	if state.player_location == "моя_комната":
 		_draw_my_room()
+	_add_chore_button()
 	var people = state.get_people_in_location(state.player_location)
 	
 	# Peep option for private bedrooms
@@ -525,6 +526,21 @@ func _draw_toilet():
 	)
 	v.add_child(leave)
 	character_container.add_child(panel)
+	_add_chore_button()
+
+func _add_chore_button():
+	var job = state.chore_for(state.player_location)
+	if job.is_empty():
+		return
+	var b = Button.new()
+	b.text = "%s   +%d" % [job["name"], job["pay"]]
+	b.position = Vector2(24, 78)
+	b.custom_minimum_size = Vector2(230, 42)
+	b.pressed.connect(func():
+		state.add_log(state.do_chore(state.player_location))
+		_refresh_all()
+	)
+	character_container.add_child(b)
 
 func _add_kernel_button(box: VBoxContainer, char: CharacterData, title: String, slot: String, rel_gain: int, ar_gain: int):
 	var b = Button.new()
@@ -846,7 +862,7 @@ func _run_kernel(char: CharacterData, slot: String, hours: int, rel_gain: int, a
 	char.change_relation(rel_gain)
 	char.change_arousal(ar_gain)
 	char.change_mood(3)
-	state.add_log("<....>")
+	state.add_log("...")
 	_open_time_lock(slot, hours)
 
 func _open_time_lock(slot: String, hours: int):
@@ -907,7 +923,7 @@ func _execute_action(aid: String, hours: int, char: CharacterData):
 			else:
 				char.change_relation(4)
 				char.change_arousal(6)
-				r = "<....>"
+				r = "..."
 				_open_time_lock("slot_1", hours)
 				state.add_log(r)
 				if action_menu:
@@ -977,21 +993,29 @@ func _show_dialogue_box(char: CharacterData, dialog: Dictionary):
 	box.name = "DialogueBox"
 	box.z_index = 30
 	box.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	box.offset_left = 40
-	box.offset_right = -300
-	box.offset_top = -280
-	box.offset_bottom = -110
+	box.offset_left = 24
+	box.offset_right = -24
+	box.offset_top = -250
+	box.offset_bottom = -96
 	add_child(box)
-	var v = VBoxContainer.new()
-	box.add_child(v)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	box.add_child(row)
+	var left = VBoxContainer.new()
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(left)
 	var who = Label.new()
 	who.text = char.char_name
-	who.add_theme_font_size_override("font_size", 16)
-	v.add_child(who)
+	who.add_theme_font_size_override("font_size", 18)
+	left.add_child(who)
 	var tl = Label.new()
 	tl.text = dialog["text"]
 	tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(tl)
+	left.add_child(tl)
+	var right = VBoxContainer.new()
+	right.custom_minimum_size = Vector2(320, 0)
+	right.add_theme_constant_override("separation", 6)
+	row.add_child(right)
 	for opt in dialog["options"]:
 		var b = Button.new()
 		b.text = opt["text"]
@@ -1000,13 +1024,16 @@ func _show_dialogue_box(char: CharacterData, dialog: Dictionary):
 			char.change_relation(opt["relation"])
 			char.change_arousal(opt["arousal"])
 			char.change_mood(opt["relation"] * 2)
-			state.add_log("Ты: %s\n%s: %s\n(Trust %+d, возбуждение %+d)" % [opt["text"], char.char_name, opt["response"], opt["relation"], opt["arousal"]])
+			var reply = opt["response"]
+			if int(opt["arousal"]) >= 8:
+				reply = "..."
+			state.add_log("Ты: %s\n%s: %s\n(Trust %+d, возбуждение %+d)" % [opt["text"], char.char_name, reply, opt["relation"], opt["arousal"]])
 			state.advance_time(1)
 			if is_instance_valid(box):
 				box.queue_free()
 			_refresh_all()
 		)
-		v.add_child(b)
+		right.add_child(b)
 
 
 func _on_midnight():
