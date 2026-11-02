@@ -41,18 +41,72 @@ func _ready():
 	$TopBar/HBox.add_child(money_label)
 	_update_money()
 	_build_room_bar()
+	_apply_ui()
 	_refresh_all()
 	state.add_log("Работа: 8ч=+1000. Магазин: покупки. Обе вместе → общие действия.")
 
+func _apply_ui():
+	var theme = Theme.new()
+	var panel = _box(Color(0.07, 0.07, 0.09, 0.78), 14)
+	var button = _box(Color(0.16, 0.16, 0.2, 0.94), 10)
+	var hover = _box(Color(0.28, 0.2, 0.26, 0.98), 10)
+	var pressed = _box(Color(0.45, 0.22, 0.32, 1), 10)
+	theme.set_stylebox("panel", "PanelContainer", panel)
+	theme.set_stylebox("normal", "Button", button)
+	theme.set_stylebox("hover", "Button", hover)
+	theme.set_stylebox("pressed", "Button", pressed)
+	theme.set_stylebox("focus", "Button", hover)
+	theme.set_color("font_color", "Button", Color(0.96, 0.94, 0.95))
+	theme.set_color("font_hover_color", "Button", Color(1, 0.92, 0.95))
+	theme.set_font_size("font_size", "Button", 15)
+	theme.set_color("default_color", "Label", Color(0.95, 0.93, 0.94))
+	theme.set_color("default_color", "RichTextLabel", Color(0.9, 0.88, 0.9))
+	set_theme(theme)
+	$TopBar.offset_bottom = 58
+	$CharacterContainer.offset_left = 0
+	$CharacterContainer.offset_top = 64
+	$CharacterContainer.offset_right = 0
+	$CharacterContainer.offset_bottom = -92
+	$SidePanel.offset_left = -280
+	$SidePanel.offset_top = 66
+	$SidePanel.offset_bottom = -100
+	$BottomBar.offset_top = -84
+	if action_menu:
+		action_menu.custom_minimum_size = Vector2(280, 0)
+
+func _box(color: Color, radius: int) -> StyleBoxFlat:
+	var box = StyleBoxFlat.new()
+	box.bg_color = color
+	box.corner_radius_top_left = radius
+	box.corner_radius_top_right = radius
+	box.corner_radius_bottom_left = radius
+	box.corner_radius_bottom_right = radius
+	box.content_margin_left = 12
+	box.content_margin_right = 12
+	box.content_margin_top = 8
+	box.content_margin_bottom = 8
+	box.border_color = Color(1, 1, 1, 0.08)
+	box.set_border_width_all(1)
+	return box
+
+func _open_action_menu():
+	action_menu.visible = true
+	action_menu.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	action_menu.offset_left = -150
+	action_menu.offset_right = 150
+	action_menu.offset_top = 110
+	action_menu.offset_bottom = 560
+	action_menu.z_index = 30
+
 func _update_money():
-	if money_label: money_label.text = "  💰 %d" % state.money
+	if money_label: money_label.text = "%d" % state.money
 
 func _build_room_bar():
 	for c in room_row.get_children(): c.queue_free()
 	room_buttons.clear()
 	for loc in state.LOCATIONS:
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(95, 78)
+		btn.custom_minimum_size = Vector2(104, 62)
 		btn.toggle_mode = true
 		btn.pressed.connect(_on_room.bind(loc))
 		room_row.add_child(btn)
@@ -245,12 +299,15 @@ func _enter_room(loc: String, char: CharacterData, quiet: bool):
 	_refresh_all()
 
 func _refresh_all():
-	if top_bar: top_bar.text = "%s   %s   (%s)" % [state.day.capitalize(), state.get_time_str(), state.get_period()]
-	if lena_stats: lena_stats.text = state.lena.status_short()
-	if masha_stats: masha_stats.text = state.masha.status_short()
+	if top_bar: top_bar.text = "%s  %s" % [state.day.capitalize(), state.get_time_str()]
+	if lena_stats: lena_stats.text = _hud_line(state.lena)
+	if masha_stats: masha_stats.text = _hud_line(state.masha)
 	_update_money()
 	_draw_scene()
 	_update_room_bar()
+
+func _hud_line(c: CharacterData) -> String:
+	return "%s   T%d  Э%d  Г%d\n%s · %s" % [c.char_name, c.relation, c.energy, c.hunger, c.emotion, c.mood]
 
 func _draw_scene():
 	for c in character_container.get_children(): c.queue_free()
@@ -644,9 +701,7 @@ func _show_char_menu(char: CharacterData):
 	cb.text = "Закрыть"
 	cb.pressed.connect(func(): action_menu.visible = false)
 	action_list.add_child(cb)
-	action_menu.visible = true
-	action_menu.position = Vector2(430, 120)
-	action_menu.z_index = 20
+	_open_action_menu()
 
 func _add_action_button(text: String, cb: Callable):
 	var b = Button.new()
@@ -747,9 +802,7 @@ func _show_group_actions():
 		h2.text = "Нужен Trust ≥ 60 у обеих."
 		action_list.add_child(h2)
 	var cb = Button.new(); cb.text = "Закрыть"; cb.pressed.connect(func(): action_menu.visible = false); action_list.add_child(cb)
-	action_menu.visible = true
-	action_menu.position = Vector2(430, 120)
-	action_menu.z_index = 20
+	_open_action_menu()
 
 func _start_group_dialog():
 	var popup = Window.new(); popup.title = "Общий диалог"; popup.size = Vector2i(520, 360); popup.unresizable = true
