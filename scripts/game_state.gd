@@ -16,6 +16,7 @@ var day: String = "суббота"
 var player_location: String = "зал"
 var money: int = 2000
 var inventory = {"чай": 1, "кофе": 0, "алкоголь": 0, "снотворное": 0}
+var player_coffee: bool = false
 var lena: CharacterData
 var masha: CharacterData
 var log_messages: Array[String] = []
@@ -46,11 +47,17 @@ func advance_time(hours: int = 1):
 			day_index = (day_index + 1) % 7
 			day = DAYS[day_index]
 			_new_day()
-			midnight_warned = false
-			if not midnight_warned:
-				midnight_warned = true
-				midnight_reached.emit()
-				add_log("Уже полночь. Пора спать, или выпей кофе, если хочешь действовать ночью.")
+			midnight_warned = true
+			midnight_reached.emit()
+			if player_coffee:
+				add_log("Полночь. Кофе действует, можно ходить по комнатам.")
+			else:
+				player_location = "моя_комната"
+				add_log("Полночь. Ты в своей комнате. Выпей кофе, если хочешь выйти.")
+		if hour == 7:
+			player_coffee = false
+			for char in [lena, masha]:
+				char.effects["no_sleep_night"] = false
 		for char in [lena, masha]:
 			char.tick_needs(1, char.is_asleep())
 		apply_schedule()
@@ -61,9 +68,6 @@ func advance_time(hours: int = 1):
 func _new_day():
 	for char in [lena, masha]:
 		char.clear_daily_effects()
-		if char.effects.get("no_sleep_night", false):
-			char.set_state("спит")
-			char.effects["no_sleep_night"] = false
 		if char.drunk_level > 0:
 			char.drunk_level = maxi(0, char.drunk_level - 1)
 			if char.drunk_level == 0:
@@ -178,6 +182,24 @@ func _get_scheduled(key: String, d: String, h: int) -> String:
 			if h < 18: return "работа"
 			if h < 21: return "зал"
 			return "комната_маши"
+
+func night_locked() -> bool:
+	return hour < 7 and not player_coffee
+
+func drink_player_coffee() -> String:
+	if inventory.get("кофе", 0) <= 0:
+		return "Кофе нет. Купи в магазине."
+	inventory["кофе"] -= 1
+	player_coffee = true
+	return "Ты выпил кофе. Этой ночью можно не спать и ходить по комнатам."
+
+func sleep_until_morning() -> String:
+	var hours = (7 - hour + 24) % 24
+	if hours == 0:
+		hours = 24
+	player_coffee = false
+	advance_time(hours)
+	return "Ты поспал до утра. Сейчас %s." % get_time_str()
 
 func rest(hours: int, reason: String = "отдых") -> String:
 	advance_time(hours)

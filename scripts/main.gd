@@ -126,6 +126,10 @@ func _on_room(loc: String):
 		if inside.size() > 0 and state.player_location != loc:
 			_show_door(loc, inside[0])
 			return
+	if state.night_locked() and loc != "моя_комната":
+		state.add_log("Без кофе с полуночи до 7:00 ты не выходишь из комнаты.")
+		_refresh_all()
+		return
 	var check = state.can_enter_room(loc)
 	if not check["ok"]:
 		state.add_log(check["reason"])
@@ -265,6 +269,8 @@ func _draw_scene():
 		_draw_toilet(); return
 	if state.player_location == "ванная":
 		_draw_bathroom(); return
+	if state.player_location == "моя_комната":
+		_draw_my_room()
 	var people = state.get_people_in_location(state.player_location)
 	
 	# Peep option for private bedrooms
@@ -284,6 +290,38 @@ func _draw_scene():
 		var l = Label.new(); l.text = "Никого нет\nПозови или смени комнату"; l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		p.add_child(l); character_container.add_child(p); return
 	_place_sprites(people)
+
+func _draw_my_room():
+	var panel = PanelContainer.new()
+	panel.position = Vector2(30, 40)
+	panel.custom_minimum_size = Vector2(240, 140)
+	var v = VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	panel.add_child(v)
+	var title = Label.new()
+	title.text = "Твоя комната"
+	v.add_child(title)
+	var sleep_b = Button.new()
+	sleep_b.text = "Спать до 7:00"
+	sleep_b.pressed.connect(func():
+		state.add_log(state.sleep_until_morning())
+		_refresh_all()
+	)
+	v.add_child(sleep_b)
+	var coffee_b = Button.new()
+	var n = state.inventory.get("кофе", 0)
+	coffee_b.text = "Выпить кофе (%d)" % n
+	coffee_b.disabled = n <= 0
+	coffee_b.pressed.connect(func():
+		state.add_log(state.drink_player_coffee())
+		_refresh_all()
+	)
+	v.add_child(coffee_b)
+	if state.player_coffee:
+		var on = Label.new()
+		on.text = "Кофе действует."
+		v.add_child(on)
+	character_container.add_child(panel)
 
 func _place_sprites(people: Array):
 	var count = people.size()
