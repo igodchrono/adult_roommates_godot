@@ -38,25 +38,24 @@ func get_period() -> String:
 
 func advance_time(hours: int = 1):
 	if hours <= 0: return
-	var prev_hour = hour
-	hour += hours
-	while hour >= 24:
-		hour -= 24
-		day_index = (day_index + 1) % 7
-		day = DAYS[day_index]
-		_new_day()
-		midnight_warned = false
-	# Crossed midnight (00:00)
-	if prev_hour > 0 and (prev_hour + hours) >= 24:
-		if not midnight_warned:
-			midnight_warned = true
-			midnight_reached.emit()
-			add_log("🌙 Уже полночь. Пора спать, или выпей кофе, если хочешь действовать ночью.")
-	elif hour == 0 and prev_hour != 0 and not midnight_warned:
-		midnight_warned = true
-		midnight_reached.emit()
-		add_log("🌙 Уже полночь. Пора спать, или выпей кофе, если хочешь действовать ночью.")
-	apply_schedule()
+	for _step in hours:
+		var prev_hour = hour
+		hour += 1
+		if hour >= 24:
+			hour -= 24
+			day_index = (day_index + 1) % 7
+			day = DAYS[day_index]
+			_new_day()
+			midnight_warned = false
+			if not midnight_warned:
+				midnight_warned = true
+				midnight_reached.emit()
+				add_log("Уже полночь. Пора спать, или выпей кофе, если хочешь действовать ночью.")
+		for char in [lena, masha]:
+			char.tick_needs(1, char.is_asleep())
+		apply_schedule()
+		if prev_hour == 23 and hour == 0:
+			pass
 	time_changed.emit()
 
 func _new_day():
@@ -72,39 +71,55 @@ func _new_day():
 
 func apply_schedule():
 	for char in [lena, masha]:
-		# Priority: need toilet after tea
+		if char.state == "ест":
+			char.restore_hunger()
+		elif char.state == "умывается":
+			char.restore_hygiene()
 		if char.effects.get("need_toilet", false):
 			if char.location != "туалет":
-				char.set_location("туалет")
-				char.set_state("бодрствует")
-				add_log("%s пошла в туалет." % char.char_name)
+				_place(char, "туалет", "бодрствует", "%s пошла в туалет." % char.char_name)
 			else:
-				# Already there — clear after this tick so they leave next hour
 				char.effects["need_toilet"] = false
 			continue
 		if char.state == "отключка" or char.effects.get("deep_sleep", false):
-			char.set_location("комната_лены" if char.key == "lena" else "комната_маши")
+			_place(char, "комната_лены" if char.key == "lena" else "комната_маши", char.state, "")
+			continue
+		if char.energy < 25 and (get_period() == "ночь" or char.energy < 12) and not char.effects.get("no_sleep_night", false):
+			var room = "комната_лены" if char.key == "lena" else "комната_маши"
+			if char.state != "спит":
+				_randomize_sleep_state(char)
+			_place(char, room, "спит", "%s устала и легла спать." % char.char_name)
+			continue
+		if char.hunger < 30 and get_period() != "ночь":
+			_place(char, "кухня", "ест", "%s проголодалась и пошла на кухню." % char.char_name)
+			continue
+		if char.hygiene < 30 and get_period() != "ночь" and _get_scheduled(char.key, day, hour) != "работа":
+			_place(char, "ванная", "умывается", "%s пошла умываться." % char.char_name)
 			continue
 		var planned = _get_scheduled(char.key, day, hour)
 		if planned == "работа":
-			char.set_location("работа")
-			char.set_state("бодрствует")
+			_place(char, "работа", "бодрствует", "")
 			continue
-		char.set_location(planned)
-		var period = get_period()
-		if period == "ночь" and not char.effects.get("no_sleep_night", false):
+		var next_state = "бодрствует"
+		if get_period() == "ночь" and not char.effects.get("no_sleep_night", false):
 			if char.effects.get("pass_out", false) or char.drunk_level >= 2:
-				char.set_state("отключка")
+				next_state = "отключка"
 			else:
+				next_state = "спит"
 				if char.state != "спит":
 					_randomize_sleep_state(char)
-				char.set_state("спит")
 		else:
-			if char.state != "отключка":
-				char.set_state("бодрствует")
-				char.has_blanket = true
-				if char.clothes == "голая" and not char.effects.get("deep_sleep", false):
-					char.set_clothes("домашняя")
+			char.has_blanket = true
+			if char.clothes == "голая" and not char.effects.get("deep_sleep", false):
+				char.set_clothes("домашняя")
+		_place(char, planned, next_state, "")
+
+func _place(char: CharacterData, loc: String, next_state: String, msg: String):
+	var changed = char.location != loc or char.state != next_state
+	char.set_location(loc)
+	char.set_state(next_state)
+	if changed and msg != "":
+		add_log(msg)
 
 func _get_scheduled(key: String, d: String, h: int) -> String:
 	var is_weekend = d in ["суббота", "воскресенье"]

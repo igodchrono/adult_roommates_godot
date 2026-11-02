@@ -13,7 +13,10 @@ var mood: String = "нейтральное"
 var drunk_level: int = 0
 var anxiety: int = 0
 var offended_days: int = 0
-var has_blanket: bool = true
+var energy: int = 75
+var hunger: int = 70
+var hygiene: int = 80
+var mood_value: int = 60
 
 var effects := {
 	"no_sleep_night": false,
@@ -54,6 +57,34 @@ func apply_effect(effect_name: String):
 		effects[effect_name] = true
 	if effect_name == "pass_out":
 		drunk_level = mini(3, drunk_level + 1)
+
+func tick_needs(hours: int, asleep: bool):
+	for _i in hours:
+		if asleep:
+			energy = clampi(energy + 12, 0, 100)
+			hunger = clampi(hunger - 2, 0, 100)
+			hygiene = clampi(hygiene - 1, 0, 100)
+		else:
+			energy = clampi(energy - 5, 0, 100)
+			hunger = clampi(hunger - 6, 0, 100)
+			hygiene = clampi(hygiene - 3, 0, 100)
+		var base = int((energy + hunger + hygiene) / 3.0)
+		base -= int(anxiety / 8.0)
+		if offended_days > 0:
+			base -= 15
+		mood_value = clampi(base, 0, 100)
+		if mood_value < 30:
+			mood = "плохое"
+		elif mood_value < 55:
+			mood = "нейтральное"
+		else:
+			mood = "хорошее"
+
+func restore_hunger():
+	hunger = clampi(hunger + 50, 0, 100)
+
+func restore_hygiene():
+	hygiene = clampi(hygiene + 45, 0, 100)
 
 func clear_daily_effects():
 	effects["need_toilet"] = false
@@ -99,4 +130,4 @@ func status_short() -> String:
 		extra = " [drunk %d]" % drunk_level
 	elif anxiety > 0:
 		extra = " [трев %d%%]" % anxiety
-	return "%s: T%d L%d | %s | %s%s" % [char_name, relation, arousal, clothes, state, extra]
+	return "%s: T%d Э%d Г%d Ч%d | %s%s" % [char_name, relation, energy, hunger, hygiene, state, extra]
